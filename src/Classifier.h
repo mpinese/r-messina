@@ -2,12 +2,12 @@
  * A class to implement the threshold classifier.  Performs
  * both training and testing.
  *
- * Copyright 2008 Mark Pinese
+ * Copyright 2013 Mark Pinese
  *
- * Licensed under the Common Public License 1.0 (the "License");
+ * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *     http://www.opensource.org/licenses/cpl1.0.php
+ *     http://opensource.org/licenses/eclipse-1.0
  *
  * Changelog:
  * 20070809	Commenced writing.
@@ -17,6 +17,7 @@
  * 20080506	Added train(bool sorted), trainOnCache and setupFullTrainCache
  * 			to simplify training on the full data set.
  * 20080722	Changed license from AFL 3.0 to CPL 1.0.
+ * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
  */
 
 #ifndef _CLASSIFIER_H

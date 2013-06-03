@@ -2,12 +2,12 @@
  * A class to implement the threshold classifier.  Performs
  * both training and testing.
  *
- * Copyright 2008 Mark Pinese
+ * Copyright 2013 Mark Pinese
  *
- * Licensed under the Common Public License 1.0 (the "License");
+ * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *     http://www.opensource.org/licenses/cpl1.0.php
+ *     http://opensource.org/licenses/eclipse-1.0
  *
  * Changelog:
  * 20070809	Commenced writing.
@@ -25,14 +25,15 @@
  * 			re-use of the class making the constructor code useless.
  * 20080506	Added train(bool sorted), trainOnCache and setupFullTrainCache
  * 			to simplify training on the full data set.
- * 20080722	Changed license from AFL 3.0 to CPL 1.0.
+ * 20080722	Changed licence from AFL 3.0 to CPL 1.0.
+ * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
+ *          Changed Classifier::decide to use the internal R PRNG. 
+ *          Changed asserts to Rcpp stops.
  */
 
 #include "Classifier.h"
 
-#include <assert.h>
-
-#include "well1024a.h"
+#include <Rcpp.h>
 
 
 STATUS Classifier::init(float targ_sens, float targ_spec, const Data *data)
@@ -381,14 +382,17 @@ STATUS Classifier::trainOnCache(int32_t n_samples)
 	neg_valid_fr = !(neg_f0 == n_samples && neg_f1 == n_samples);
 	pos_valid_fr = !(pos_f0 == n_samples && pos_f1 == n_samples);
 
-	assert(m_trainexprs[pos_f1] >= m_trainexprs[pos_f0]);
-	assert(m_trainexprs[neg_f1] >= m_trainexprs[neg_f0]);
-	assert(neg_valid_fr || pos_valid_fr);
-	assert(pos_f1 > pos_f0 || !pos_valid_fr);
-	assert(neg_f1 > neg_f0 || !neg_valid_fr);
+	if (!(m_trainexprs[pos_f1] >= m_trainexprs[pos_f0]))
+		Rcpp::stop("Internal messina assertion failed (m_trainexprs[pos_f1] >= m_trainexprs[pos_f0]).  Please report this to the package maintainer.");
+	if (!(m_trainexprs[neg_f1] >= m_trainexprs[neg_f0]))
+		Rcpp::stop("Internal messina assertion failed (m_trainexprs[neg_f1] >= m_trainexprs[neg_f0]).  Please report this to the package maintainer.");
+	if (!(neg_valid_fr || pos_valid_fr))
+		Rcpp::stop("Internal messina assertion failed (neg_valid_fr || pos_valid_fr).  Please report this to the package maintainer.");
+	if (!(pos_f1 > pos_f0 || !pos_valid_fr))
+		Rcpp::stop("Internal messina assertion failed (pos_f1 > pos_f0 || !pos_valid_fr).  Please report this to the package maintainer.");
+	if (!(neg_f1 > neg_f0 || !neg_valid_fr))
+		Rcpp::stop("Internal messina assertion failed (neg_f1 > neg_f0 || !neg_valid_fr).  Please report this to the package maintainer.");
 
-	//pos_f0--;
-	//neg_f0--;
 	pos_margin = m_trainexprs[pos_f1] - m_trainexprs[pos_f0];
 	neg_margin = m_trainexprs[neg_f1] - m_trainexprs[neg_f0];
 
@@ -521,10 +525,10 @@ inline bool Classifier::decide(uint16_t expr_level)
 	case TYPE_ONE_CLASS:
 		return m_posk;
 	case TYPE_ZERO_R:
-		return float(well::randf()) < m_ptrue;
+		return Rcpp::runif(1, 0, 1)[0] < m_ptrue;
 	}
 
-	assert(false);
+	Rcpp::stop("Internal messina assertion failed: Classifier::decide fell through.  Please report this to the package maintainer.");
 	return false;
 }
 

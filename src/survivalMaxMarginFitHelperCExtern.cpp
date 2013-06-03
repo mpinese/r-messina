@@ -1,3 +1,17 @@
+/* messinaExtern.cpp
+ * R interface for the MessinaSurv algorithm.
+ *
+ * Copyright 2013 Mark Pinese
+ *
+ * Licensed under the Eclipse Public License 1.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://opensource.org/licenses/eclipse-1.0
+ *
+ * Changelog:
+ * 20130603 Added changelog, placed under the EPL licence.
+ */
+
 #include <Rcpp.h>
 
 #ifndef BEGIN_RCPP

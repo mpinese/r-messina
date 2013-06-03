@@ -32,10 +32,10 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (!is.logical(y))					stop("Error: Class membership indicator y must be a vector of logical (TRUE / FALSE) values.")
 	if (any(is.na(x)))					stop("Error: Missing values in x.  Messina cannot handle missing data at this time.")
 	if (any(is.na(y)))					stop("Error: Missing values in y.  Messina cannot handle missing class membership information.")
-	if (!is.numeric(min_sens))			stop(cat("Error: Invalid value for minimum acceptable sensitivity min_sens:", min_sens))
-	if (!is.numeric(min_spec))			stop(cat("Error: Invalid value for minimum acceptable specificity min_spec:", min_spec))
-	if (!is.numeric(f_train))			stop(cat("Error: Invalid value for training sample fraction f_train:", f_train))
-	if (!is.numeric(n_boot))			stop(cat("Error: Invalid value for number of bootstrap iterations n_boot:", n_boot))
+	if (!is.numeric(min_sens))			stop(sprintf("Error: Invalid value for minimum acceptable sensitivity min_sens: %s", str(min_sens)))
+	if (!is.numeric(min_spec))			stop(sprintf("Error: Invalid value for minimum acceptable specificity min_spec: %s", str(min_spec)))
+	if (!is.numeric(f_train))			stop(sprintf("Error: Invalid value for training sample fraction f_train: %s", str(f_train)))
+	if (!is.numeric(n_boot))			stop(sprintf("Error: Invalid value for number of bootstrap iterations n_boot: %s", str(n_boot)))
 	if (ncol(x) < 3)					stop(sprintf("Error: Too few samples (%d).  Messina requires at least 3 samples.", ncol(x)))
 	if (sum(y) == 0 || sum(!y) == 0)	stop(sprintf("Error: All samples are of the same class.  Messina requires samples in each class to operate."))
 	if (ncol(x) != length(y))			stop(sprintf("Error: Inconsistent input data sizes.  Number of rows of data x (%d) does not equal length of class labels y (%d).", nrow(x), length(y)))
@@ -114,8 +114,14 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 
 
 
-plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
+#plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
+plot.MessinaResult = function(x, ...)
 {
+	if (missing(i))	i <- NULL
+	if (missing(type)) type <- "ggplot2"
+	
+	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+	
 	if (!(type %in% c("base", "ggplot2")))
 	{
 		stop(sprintf("Error: supplied plot type \"%s\" not recognised.  type must be either \"base\" or \"ggplot2\".", type))
@@ -130,20 +136,20 @@ plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
 		}
 	}
 	
-	if (result$problem == "classification")
+	if (x$problem == "classification")
 	{
 		if (is.null(i))
 		{
-			temp.margin = result$margin
-			temp.margin[!result$passed] = NA
-			i = which.max(temp$margin)
+			temp.margin = x$margin
+			temp.margin[!x$passed] = NA
+			i = which.max(temp.margin)
 		}
-		this_x = result$parameters$x[i,]
+		this_x = x$parameters$x[i,]
 		this_order = order(this_x)
 		this_x = this_x[this_order]
-		this_y = result$parameters$y[this_order]
-		this_threshold = result$classifier$threshold[i]
-		this_margin = result$margin[i]
+		this_y = x$parameters$y[this_order]
+		this_threshold = x$classifier$threshold[i]
+		this_margin = x$margin[i]
 		ymax = max(c(this_x, this_threshold + this_margin/2))
 
 		this_data = data.frame(Sample = names(this_x), Value = this_x, Class = ordered(this_y*1))
@@ -159,7 +165,7 @@ plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
 				geom_point(stat = "identity") +
 				geom_hline(yintercept = c(this_threshold - this_margin/2, this_threshold, this_threshold + this_margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7) + 
 				xlab("Sample") +
-				ggtitle(result$parameters$features[i]) + coord_flip()
+				ggtitle(x$parameters$features[i]) + coord_flip()
 		}
 		else
 		{		
@@ -167,20 +173,20 @@ plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
 			abline(h = c(this_threshold - this_margin/2, this_threshold, this_threshold + this_margin/2), lwd = 2, lty = c("dotted", "solid", "dotted"))
 		}
 	}
-	else if (result$problem == "survival")
+	else if (x$problem == "survival")
 	{
 		stop("Error: Plotting for messina problem type 'survival' is not yet implemented.")
 	}
 	else
 	{
-		stop(sprintf("Error: Unrecognised problem type '%s' -- cannot plot this Messina result.", result$problem))
+		stop(sprintf("Error: Unrecognised problem type '%s' -- cannot plot this Messina result.", x$problem))
 	}
 }
 
 
-summary.MessinaResult = function(result, ...)
+summary.MessinaResult = function(object, ...)
 {
-	toptable(result, ...)
+	toptable(object, ...)
 }
 
 

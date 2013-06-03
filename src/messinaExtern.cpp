@@ -1,3 +1,18 @@
+/* messinaExtern.cpp
+ * R interface for the Messina algorithm.
+ *
+ * Copyright 2013 Mark Pinese
+ *
+ * Licensed under the Eclipse Public License 1.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *     http://opensource.org/licenses/eclipse-1.0
+ *
+ * Changelog:
+ * 20121010 Wrote.
+ * 20130603 Placed under the EPL licence.
+ */
+
 #include <Rcpp.h>
 
 #ifndef BEGIN_RCPP
@@ -8,14 +23,10 @@
 #define END_RCPP
 #endif
 
-//#include <stdio.h>
-//#include <iostream>
-
 #include "types.h"
 #include "Data.h"
 #include "Classifier.h"
 #include "crossval.h"
-#include "well1024a.h"
 
 
 using namespace Rcpp;
@@ -46,14 +57,11 @@ SEXP convertResults2R(Result *results, uint32_t n_results);
 
 	The Messina code populates an array of type Result (defined in Classifier.h), which then
 	is converted back to SEXP objects for return to R.
-
-	Mark Pinese
-	20121010	Wrote.
 */
 SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed)
 {
 	BEGIN_RCPP
-	
+
 	NumericMatrix x(Rx);
 	LogicalVector cls(Rcls);
 	
@@ -65,34 +73,28 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	STATUS err;
 	SEXP retval;
 	
-	well::seed(as<uint32_t>(Rseed));
+	RNGScope scope;	
 	
 	Data data;
 	Result *results;
 	Classifier classifier;
 	FILE *out;
 	
-//	printf("  convertRMatrix2Data...\n");
 	if ((err = convertRMatrix2Data(x, cls, data)) != OK)
 		return R_NilValue;
-//	data.printSummary();
 	
-//	printf("  classifier.init...\n");
 	if ((err = classifier.init(minsens, minspec, &data)) != OK)
 		return R_NilValue;
 	
-//	printf("  Result...\n");
 	if ((results = new Result[data.getNGenes()]) == NULL)
 		return R_NilValue;
 	
-//	printf("  CrossVal::cv...\n");
-	if ((err = CrossVal::cv(n_train, n_boot, classifier, results, false)) != OK)
+	if ((err = CrossVal::cv(n_train, n_boot, classifier, results)) != OK)
 	{
 		delete results;
 		return R_NilValue;
 	}
 	
-//	printf("  convertResults2R...\n");
 	retval = convertResults2R(results, data.getNGenes());
 	delete results;
 	return retval;
@@ -105,9 +107,6 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	to the internal representation used by Messina, a Data object.  Coerces all entries of
 	x to uint16_t type (bounds [0, 65535]), and higher R code must ensure that this bound is
 	respected.
-
-	Mark Pinese
-	20121010	Wrote.
 */
 STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data)
 {
