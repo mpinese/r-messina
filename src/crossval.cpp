@@ -3,12 +3,12 @@
  * described by Nadeau & Bengio 2003.  Functions are wrapped
  * up in a namespace.
  *
- * Copyright 2008 Mark Pinese
+ * Copyright 2013 Mark Pinese
  *
- * Licensed under the Common Public License 1.0 (the "License");
+ * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *     http://www.opensource.org/licenses/cpl1.0.php
+ *     http://opensource.org/licenses/eclipse-1.0
  *
  * Changelog:
  * 20070812	Started writing.
@@ -16,17 +16,16 @@
  * 20080130	Added GUI reporting handling code.
  * 20080414	Added licence header.
  * 20080722	Changed license from AFL 3.0 to CPL 1.0.
+ * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
+ *          Changed selectTestSet to use the internal R PRNG. 
+ *          Changed asserts to Rcpp stops.
  */
 
-#include <assert.h>
-
-#include <iostream>
+#include <Rcpp.h>
 
 #include "types.h"
-//#include "errors.h"
 #include "Classifier.h"
 #include "Data.h"
-#include "well1024a.h"
 
 #include "crossval.h"
 
@@ -39,12 +38,19 @@ inline void selectTestSet(bool *in_test, int32_t test_size, int32_t n_samples)
 {
 	int32_t test_done, new_point;
 
-	assert(test_size < n_samples);
+	if (!(test_size < n_samples))
+		Rcpp::stop("Internal messina assertion failed (test_size < n_samples).  Please report this to the package maintainer.");
+	
 	for (new_point = 0; new_point < n_samples; in_test[new_point++] = false);
-
+	
 	for (test_done = 0; test_done < test_size; )
 	{
-		new_point = well::randi(n_samples);
+		do
+		{
+			new_point = uint32_t(Rcpp::runif(1, 0, n_samples)[0]);
+		}
+		while (new_point == n_samples);
+		
 		if (!in_test[new_point])
 		{
 			in_test[new_point] = true;
@@ -143,7 +149,7 @@ inline void calcPerformanceStats(const Perf& sum, const Perf& sum_sq, Perf& mean
 }
 
 
-STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *results, bool in_gui)
+STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *results)
 {
 	// classifier.init has been called by the caller of this function.
 	// results is assumed to be already allocated, and is a pointer to the start of an
@@ -184,6 +190,8 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 
 	for (gene = 0; gene < n_genes; gene++)
 	{
+		// ### TODO this would be a good place for an interrupt test.
+		
 		if ((err = classifier.cacheGene(gene)) != OK)
 		{
 			delete train_indices;
@@ -211,9 +219,6 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		results[gene].mean = mean;
 		results[gene].var = var;
 		results[gene].p_successful = float(n_successful) / n_iters;
-		
-		if (in_gui)
-			std::cout << gene << std::endl;
 	}
 
 

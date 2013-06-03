@@ -10,21 +10,17 @@ Add literature references to docs
 
 Integrate with Bioconductor (eg move to ESet)
 
-Decide on licence
-
-Change cat output to message, unless in show method
-
 Add dev.new for new graphics devices, to avoid kludging existing ones
-
-Set version for final pre-submission to 0.99.0
 
 Check that C-code complies with Bioc guidelines
 If the package contains C or Fortran code, it should adhere to the standards and methods described in the System and foreign language interfaces section of the Writing R Extensions manual. In particular:
 * Use internal R functions, e.g., R_alloc and random number generators, over system supplied ones.
 ( Use C function registration (See the Registering native routines)
-* Use R_CheckUserInterrupt in C level loops when there is a chance that they may not terminate for certain parameter settings or when their run time exceeds 10 seconds with typical parameter settings, and the method is intended for interactive use.
-* Make judicious use of Makevars and Makefile. These are often not required at all (See the Configure and cleanup).
-Use of external libraries whose functionality is redundant with libraries already supported is strongly discouraged. In cases where the external library is complex the author may need to supply pre-built binary versions for some platforms.
+* Use R_CheckUserInterrupt in C level loops when there is a chance that they may not terminate for 
+  certain parameter settings or when their run time exceeds 10 seconds with typical parameter settings, 
+  and the method is intended for interactive use.
+
+In old C++ code:
+  Add interrupt checks, and code to handle destruction gracefully in that case
 
 Finalise DESCRIPTION
-

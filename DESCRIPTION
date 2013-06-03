@@ -1,11 +1,10 @@
 Package: messina
 Type: Package
-Title: What the package does (short line)
-Version: 1.0
-Date: 2012-10-09
-Author: Mark Pinese
-Maintainer: Mark Pinese <m.pinese@garvan.org.au>
-Description: More about what it does (maybe more than one line)
-License: What Licence is it under ?
-Depends: Rcpp (>= 0.9.14), ggplot2
+Title: 
+Version: 0.99.0
+Date: 2013-06-03
+Authors@R: person("Mark", "Pinese", email = "m.pinese@garvan.org.au", role = list("aut", "cre", "cph"))
+Description: 
+License: EPL (>= 1.0)
+Depends: Rcpp (>= 0.9.14), ggplot2, survival
 LinkingTo: Rcpp

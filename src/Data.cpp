@@ -2,12 +2,12 @@
  * A class to store transcriptional data, as well as class membership
  * for all samples in an experiment.  Also handles data IO.
  *
- * Copyright 2008 Mark Pinese
+ * Copyright 2013 Mark Pinese
  *
- * Licensed under the Common Public License 1.0 (the "License");
+ * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *     http://www.opensource.org/licenses/cpl1.0.php
+ *     http://opensource.org/licenses/eclipse-1.0
  *
  * Changelog:
  * 20070809	Wrote and performed preliminary testing.
@@ -16,20 +16,13 @@
  * 			debug builds.
  * 20080722	Changed license from AFL 3.0 to CPL 1.0.
  * 20121010	Gutted to only include functionality required for an R interface.
+ * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
  */
-
-// Keep VS 2005 quiet about security issues.
-#ifdef _MSC_VER
-#define _CRT_SECURE_NO_DEPRECATE
-#endif
 
 #include <stdlib.h>
 #include <string.h>
 
-#include <assert.h>
-
 #include "Data.h"
-//#include "errors.h"
 
 
 
@@ -78,39 +71,6 @@ STATUS Data::destroyData()
 	return OK;
 }
 
-/*
-STATUS Data::printSummary() const
-{
-	printf("\nSummary of Data object at 0x%p:\n", this);
-	
-	if (!isInit())
-	{
-		printf("  Not initialized\n");
-		return OK;
-	}
-
-	const uint8_t n_genes_print = 6, n_samps_print = 6;
-	uint8_t i, j;
-	printf("  Initialized, %ld genes x %ld samples\n", m_ngenes, m_nsamps);
-	printf("  Data:");
-	for (i = 0; i < (m_ngenes < n_genes_print ? m_ngenes : n_genes_print); i++)
-	{
-		printf("\n    ");
-		for (j = 0; j < (m_nsamps < n_samps_print ? m_nsamps : n_samps_print); j++)
-			printf("% 6d ", m_exprs[makeIndex(i, j)]);
-		if (m_nsamps > n_samps_print)
-			printf("...");
-	}
-	if (m_ngenes > n_genes_print)
-	{
-		printf("\n    ");
-		for (j = 0; j < (m_nsamps < n_samps_print ? m_nsamps : n_samps_print) + 1; j++)
-			printf("   ... ");
-	}
-
-	return OK;
-}
-*/
 
 // Exprs is assumed to be in sample-major order.
 STATUS Data::readMemory(int32_t ngenes, int32_t nsamps, const uint16_t *exprs, const bool *classes)
