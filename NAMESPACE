@@ -1,0 +1,6 @@
+useDynLib(messina)
+export("messinaSurv")
+export("messina")
+export("toptable")
+export("summary.MessinaResult")
+export("plot.MessinaResult")
