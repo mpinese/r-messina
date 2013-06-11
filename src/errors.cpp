@@ -13,6 +13,7 @@
  * 			Wrote setErrorCode, getLastErrorCode.
  * 20080722	Changed license from AFL 3.0 to CPL 1.0.
  * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
+ * 20130604 Added interrupt message.
  */
 
 #include "errors.h"
@@ -36,7 +37,8 @@ static const char *messages[] = {
 		"Classifier test attempted without prior training run.  Please report this error and the conditions that generated it.",
 		"Data structure is invalid.  Please report this error and the conditions that generated it.",
 		"Testing assertion failed.  Please report this error and the conditions that generated it.",
-		"Senseless classifier parameters.  Ensure that sensitivity and specificity constraints result in an AUC > 0.5."
+		"Senseless classifier parameters.  Ensure that sensitivity and specificity constraints result in an AUC > 0.5.",
+		"Interrupt or other error signal detected."
 };
 
 

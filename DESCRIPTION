@@ -6,5 +6,5 @@ Date: 2013-06-03
 Authors@R: person("Mark", "Pinese", email = "m.pinese@garvan.org.au", role = list("aut", "cre", "cph"))
 Description: 
 License: EPL (>= 1.0)
-Depends: Rcpp (>= 0.9.14), ggplot2, survival
+Depends: R (>= 2.13.0), Rcpp (>= 0.10.3), ggplot2 (>= 0.9.3.1), survival (>= 2.37-4)
 LinkingTo: Rcpp
