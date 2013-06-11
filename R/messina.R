@@ -66,6 +66,12 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	
 	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed)
 	
+	if (typeof(result) == "character")
+	{
+		# messina encountered an error, which is returned here as a string.
+		stop(sprintf("Error: Internal error encountered in messina C++ code.  Error description from messina: \"%s\".", result))
+	}
+	
 	# Result is a list:
 	#	Item		Dimensions		Data type	Description
 	#   result$d1	Mx3 matrix		Integer		Columns are class_type, class_threshold, class_margin

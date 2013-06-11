@@ -12,6 +12,7 @@
  * 20080513	Moved from types.h
  * 20080722	Changed license from AFL 3.0 to CPL 1.0.
  * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
+ * 20130604 Added ERR_ABORTED value.
  */
 
 #ifndef ERRORS_H_
@@ -38,7 +39,8 @@ enum STATUS
 	ERR_BAD_DATASET		= -12,
 	ERR_ASSERT_FAIL		= -13,
 	ERR_BAD_CONSTRAINTS = -14,
-	ERR_MAX_PLACEHOLDER = -15,
+	ERR_ABORTED			= -15,
+	ERR_MAX_PLACEHOLDER = -16,
 	ERR_NOT_IMPLEMENTED	= -100
 };
 

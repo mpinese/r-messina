@@ -27,6 +27,7 @@
 #include "Data.h"
 #include "Classifier.h"
 #include "crossval.h"
+#include "errors.h"
 
 
 using namespace Rcpp;
@@ -71,6 +72,7 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	float minsens = as<float>(Rminsens);
 	float minspec = as<float>(Rminspec);	
 	STATUS err;
+	string errmsg;
 	SEXP retval;
 	
 	RNGScope scope;	
@@ -81,18 +83,28 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	FILE *out;
 	
 	if ((err = convertRMatrix2Data(x, cls, data)) != OK)
-		return R_NilValue;
+	{
+		errmsg.assign(getErrorMsg(err));
+		return wrap<string>(errmsg);
+	}
 	
 	if ((err = classifier.init(minsens, minspec, &data)) != OK)
-		return R_NilValue;
+	{
+		errmsg.assign(getErrorMsg(err));
+		return wrap<string>(errmsg);
+	}
 	
 	if ((results = new Result[data.getNGenes()]) == NULL)
-		return R_NilValue;
+	{
+		errmsg.assign(getErrorMsg(ERR_MALLOC));
+		return wrap<string>(errmsg);
+	}
 	
 	if ((err = CrossVal::cv(n_train, n_boot, classifier, results)) != OK)
 	{
 		delete results;
-		return R_NilValue;
+		errmsg.assign(getErrorMsg(err));
+		return wrap<string>(errmsg);
 	}
 	
 	retval = convertResults2R(results, data.getNGenes());
@@ -137,7 +149,7 @@ STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data)
 		class_array[sample_i] = cls[sample_i];
 		for (probe_i = 0; probe_i < n_probes; probe_i++)
 		{
-			exprs_array[probe_i + n_probes * sample_i] = uint16_t(x(probe_i, sample_i));	// Sample-major order
+			exprs_array[probe_i + n_probes * sample_i] = static_cast<uint16_t>(x(probe_i, sample_i));	// Sample-major order
 //			exprs_array[probe_i + n_probes * sample_i] = as<uint16_t>(x(probe_i, sample_i));	// Sample-major order
 		}
 	}
@@ -163,7 +175,6 @@ SEXP convertResults2R(Result *results, uint32_t n_results)
 	for (i = 0; i < n_results; i++)
 	{
 		this_result = results + i;
-		//cout << this_result->class_type << "\t" << this_result->class_threshold << "\t" << this_result->class_margin << "\t" << this_result->class_ptrue << "\t" << this_result->p_successful << "\t" << this_result->class_posk << endl;
 		
 		d1(i, 0) = this_result->class_type;
 		d1(i, 1) = this_result->class_threshold;
@@ -182,8 +193,6 @@ SEXP convertResults2R(Result *results, uint32_t n_results)
 		
 		d3[i] = this_result->class_posk;
 	}
-	
-	//cout << d1 << endl;
 	
 	return List::create(Named("d1") = d1, Named("d2") = d2, Named("d3") = d3);
 }

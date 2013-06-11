@@ -28,6 +28,10 @@
 #include "Data.h"
 
 #include "crossval.h"
+#include "RInterrupt.h"
+
+
+#include <stdio.h>									// ### TODO -- remove after testing
 
 
 namespace CrossVal
@@ -47,9 +51,10 @@ inline void selectTestSet(bool *in_test, int32_t test_size, int32_t n_samples)
 	{
 		do
 		{
-			new_point = uint32_t(Rcpp::runif(1, 0, n_samples)[0]);
+			new_point = static_cast<int32_t>(Rcpp::floor(Rcpp::runif(1, 0, n_samples))[0]);
+			printf("%d %d\n", new_point, n_samples);		// ### TODO -- remove after testing
 		}
-		while (new_point == n_samples);
+		while (new_point == n_samples);		// According to the R docs this isn't required unless n_samples is 'small' compared to 0, but BSTS
 		
 		if (!in_test[new_point])
 		{
@@ -190,7 +195,17 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 
 	for (gene = 0; gene < n_genes; gene++)
 	{
-		// ### TODO this would be a good place for an interrupt test.
+		// User interrupt testing; run only every now and then.
+		if (gene % 100 == 0)
+		{
+			if (RCheckInterrupt::checkInterrupt())
+			{
+				delete train_indices;
+				delete test_indices;
+				delete in_test_set;
+				return ERR_ABORTED;
+			}
+		}
 		
 		if ((err = classifier.cacheGene(gene)) != OK)
 		{
