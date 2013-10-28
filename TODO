@@ -17,3 +17,9 @@ Finalise DESCRIPTION
 Testing:
   User interrupt of long calculations
   
+
+
+TODO before deployment:
+  * Update entries in src/messina-package.R
+  * Update DESCRIPTION
+  
