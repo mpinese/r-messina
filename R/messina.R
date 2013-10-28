@@ -4,24 +4,44 @@ messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rse
 }
 
 
-#setClass("MessinaResult", representation(a = "character", b = "numeric"))
-
-
+#' Identify features that can optimally separate two classes of samples, subject
+#' to minimum performance requirements.
+#'
+#' TODO
+#' 
+#' @param x feature expression values, either supplied as an ExpressionSet, or as
+#'   an object that can be converted to a matrix by as.matrix.  In the latter case,
+#'   features should be in rows and samples in columns, with feature names taken
+#'   from the rows of the object.
+#' @param y a binary vector (TRUE/FALSE or 1/0) of class membership information for
+#'   each sample in x.
+#' @param min_sens the minimum acceptable sensitivity that a classifier separating
+#'   the two groups of y must achieve.
+#' @param min_spec the minimum acceptable specificity that a classifier separating
+#'   the two groups of y must achieve.
+#' @param f_train the fraction of samples to be used in the training splits of the
+#'   bootstrap rounds.
+#' @param n_boot the number of bootstrap rounds to use.
+#' @param seed an optional random seed for the analysis.  If NULL, a random seed 
+#    derived from the current state of the PRNG is used.
+#' @return an object of class "MessinaResult" containing the results of the analysis.
+#' @export
+#' @seealso \code{\link{MessinaResult-class}}
+#' @seealso \code{\link{ExpressionSet}}
+#' @references TODO
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL)
 {
-	# x is an ExpressionSet or an object that can be converted to a matrix by as.matrix
-	# y is a binary vector of class membership information
-	
-#	if (class(x) == "ExpressionSet")
-#	{
-#		features = featureNames(x)
-#		x = exprs(x)
-#	}
-#	else
-#	{
+	if (class(x) == "ExpressionSet")
+	{
+		features = featureNames(x)
+		x = exprs(x)
+	}
+	else
+	{
 		x = as.matrix(x)
 		features = rownames(x)
-#	}
+	}
 
 	# Calculate the number of training samples in each round.
 	n_train = round(ncol(x) * f_train)
@@ -64,6 +84,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	# Get a random seed if one wasn't supplied
 	if (is.null(seed))	seed = runif(1, 1, 2^32 - 1)
 	
+	# Call the external C functions for the actual calculation.
 	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed)
 	
 	if (typeof(result) == "character")
@@ -116,124 +137,4 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	class(result2) = "MessinaResult"
 	
 	return(result2)
-}
-
-
-
-#plot.MessinaResult = function(result, i = NULL, type = "ggplot2")
-plot.MessinaResult = function(x, ...)
-{
-	if (missing(i))	i <- NULL
-	if (missing(type)) type <- "ggplot2"
-	
-	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
-	
-	if (!(type %in% c("base", "ggplot2")))
-	{
-		stop(sprintf("Error: supplied plot type \"%s\" not recognised.  type must be either \"base\" or \"ggplot2\".", type))
-	}
-	
-	if (type == "ggplot2")
-	{
-		if (require(ggplot2) == FALSE)
-		{
-			warning("Warning: ggplot2 library must be available if type = \"ggplot2\".  Falling back to type = \"base\".")
-			type = "base"
-		}
-	}
-	
-	if (x$problem == "classification")
-	{
-		if (is.null(i))
-		{
-			temp.margin = x$margin
-			temp.margin[!x$passed] = NA
-			i = which.max(temp.margin)
-		}
-		this_x = x$parameters$x[i,]
-		this_order = order(this_x)
-		this_x = this_x[this_order]
-		this_y = x$parameters$y[this_order]
-		this_threshold = x$classifier$threshold[i]
-		this_margin = x$margin[i]
-		ymax = max(c(this_x, this_threshold + this_margin/2))
-
-		this_data = data.frame(Sample = names(this_x), Value = this_x, Class = ordered(this_y*1))
-
-		if (type == "ggplot2")
-		{
-			#~ ggplot(this_data, aes(x = Value, ymin = 0, fill = Class, colour = Class)) +
-				#~ geom_dotplot() +
-				#~ geom_vline(xintercept = c(this_threshold - this_margin/2, this_threshold, this_threshold + this_margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7) + 
-				#~ ggtitle(result$parameters$features[i])
-
-			ggplot(this_data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
-				geom_point(stat = "identity") +
-				geom_hline(yintercept = c(this_threshold - this_margin/2, this_threshold, this_threshold + this_margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7) + 
-				xlab("Sample") +
-				ggtitle(x$parameters$features[i]) + coord_flip()
-		}
-		else
-		{		
-			barplot(this_x, col = c("green", "red")[this_y + 1], ylim = c(0, ymax))
-			abline(h = c(this_threshold - this_margin/2, this_threshold, this_threshold + this_margin/2), lwd = 2, lty = c("dotted", "solid", "dotted"))
-		}
-	}
-	else if (x$problem == "survival")
-	{
-		stop("Error: Plotting for messina problem type 'survival' is not yet implemented.")
-	}
-	else
-	{
-		stop(sprintf("Error: Unrecognised problem type '%s' -- cannot plot this Messina result.", x$problem))
-	}
-}
-
-
-summary.MessinaResult = function(object, ...)
-{
-	toptable(object, ...)
-}
-
-
-toptable = function(result, maxn = 10, minmar = 1)
-{
-	if (result$problem == "classification")
-	{
-		if (!is.null(maxn))
-		{
-			ranks = rank(-result$margin, ties.method = "min")
-			sel.n = ranks <= maxn
-		}
-		else	{ sel.n = TRUE }
-		
-		if (!is.null(minmar))
-		{
-			sel.mar = result$margin >= minmar
-			sel.mar[is.na(sel.mar)] = FALSE
-		}
-		else	{ sel.mar = TRUE }
-		
-		sel = sel.n & sel.mar & !is.na(result$margin)
-		
-		summary = data.frame(	Feature = result$parameters$features[sel],
-								Cutoff = result$classifier$threshold[sel],
-								HighGroup = result$classifier$posk[sel],
-								Margin = result$margin[sel],
-								Sensitivity = result$perf$mean[sel,"Sensitivity"],
-								Specificity = result$perf$mean[sel,"Specificity"],
-								Passed = result$passed[sel])
-		summary = summary[order(-summary$Passed, -summary$Margin),]
-		rownames(summary) = NULL
-		print(summary)
-		return(invisible(summary))
-	}
-	else if (result$problem == "survival")
-	{
-		stop("Error: toptable for messina problem type 'survival' is not yet implemented.")
-	}
-	else
-	{
-		stop(sprintf("Error: Unrecognised problem type '%s' -- cannot print this Messina result.", result$problem))
-	}
 }
