@@ -4,8 +4,8 @@ messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rse
 }
 
 
-#' Identify features that can optimally separate two classes of samples, subject
-#' to minimum performance requirements.
+#' Run the Messina algorithm to find features (eg. genes) that optimally distinguish
+#' between two classes of samples, subject to minimum performance requirements.
 #'
 #' TODO
 #' 
@@ -90,7 +90,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (typeof(result) == "character")
 	{
 		# messina encountered an error, which is returned here as a string.
-		stop(sprintf("Error: Internal error encountered in messina C++ code.  Error description from messina: \"%s\".", result))
+		stop(sprintf("Error: Internal error encountered in messina C++ code.  Error description from C++ code: \"%s\".", result))
 	}
 	
 	# Result is a list:

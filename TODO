@@ -6,8 +6,6 @@ Decide on biocViews for package
 
 Add literature references to docs
 
-Integrate with Bioconductor (eg move to ESet)
-
 Add dev.new for new graphics devices, to avoid kludging existing ones
 
 Finalise DESCRIPTION
