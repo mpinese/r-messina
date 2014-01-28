@@ -128,12 +128,22 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	classifier_perf_mean = cbind(classifier_perf_mean, Sensitivity = classifier_sens_mean, Specificity = classifier_spec_mean)
 	
 	result2 = list(	problem = "classification",
-					parameters = list(x = x, y = y, features = features, min_sens = min_sens, min_spec = min_spec, f_train = f_train, n_boot = n_boot, seed = seed),
-					classifier = list(type = classifier_type, threshold = classifier_threshold, ptrue = classifier_ptrue, posk = classifier_posk), 
+					parameters = list(	x = x, 
+										y = y, 
+										features = features, 
+										perf_requirement = list(min_sens = min_sens, min_spec = min_spec),
+										f_train = f_train, 
+										n_boot = n_boot, 
+										seed = seed),
+					classifier = list(	type = classifier_type, 
+										threshold = classifier_threshold, 
+										ptrue = classifier_ptrue, 
+										posk = classifier_posk), 
 					margin = classifier_margin, 
 					psuccessful = classifier_psuccessful, 
 					passed = specifications_passed,
-					perf = list(mean = classifier_perf_mean, var = classifier_perf_var))
+					perf = list(mean = classifier_perf_mean, var = classifier_perf_var),
+					bootstraps = NA)
 	class(result2) = "MessinaResult"
 	
 	return(result2)
