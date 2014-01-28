@@ -11,7 +11,8 @@ Depends:
     R (>= 2.13.0),
     Rcpp (>= 0.10.3),
     ggplot2 (>= 0.9.3.1),
-    survival (>= 2.37-4)
+    survival (>= 2.37-4),
+	plyr (>= 1.8)
 LinkingTo: Rcpp
 Collate:
     'messina-package.R'
