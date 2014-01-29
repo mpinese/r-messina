@@ -107,6 +107,7 @@ messinaSurvTrain = function(x1, y, obj_min, obj_func = "tau")
 
 messinaSurvSingleXDraw = function(x1, y, obj_min, obj_func, n_test)
 {
+	# TODO: Make sure there are enough events in the test set to be useful
 	test_indices = sample.int(length(x1), n_test)
 	train_indices = setdiff(1:length(x1), test_indices)
 	x_test = x1[test_indices]
@@ -134,13 +135,13 @@ messinaSurvSingleXDraw = function(x1, y, obj_min, obj_func, n_test)
 messinaSurvSingleX = function(x1, y, obj_min, obj_func, n_boot, n_test)
 {
 	results = replicate(n_boot, messinaSurvSingleXDraw(x1, y, obj_min, obj_func, n_test))
-	return(results)
+	return(as.vector(results))
 }
 
 
 messinaSurvTrainOnSubset = function(x, y, obj_min, obj_func, subset, parallel)
 {
-	fits = adply(x, 
+	fits = ldply(1:nrow(x), 
 		function(xi) 
 		{ 
 			if (subset[xi])
@@ -207,6 +208,7 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 
 	n_test = ceiling((1 - f_train) * nrow(y))
 
+	cat("Performance bootstrapping...\n")
 	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = "time")
 
 	rownames(boot_objs) = rownames(x)
@@ -222,7 +224,8 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	obj_passes = mean_obj >= obj_min
 	
 	# Train MessinaSurv on just those rows of x that passed.
-	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes)
+	cat("Final training...\n")
+	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
 	
 #	result = list(summary = data.frame(PassedObj = obj_passes, MeanObj = mean_obj, Threshold = fits$Threshold, Margin = fits$Margin, Direction = fits$Direction), boot.objs = boot_objs, settings = list(obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, test_fraction = test_fraction, seed = seed))
 #	class(result) = "MessinaSurvResult"
@@ -252,9 +255,27 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 
 
 library(survival)
+library(plyr)
+
+#~ set.seed(1234)
+#~ sim.n = 100
+#~ sim.m = 10
+#~ data.x = matrix(runif(sim.m*sim.n), nrow = sim.m, ncol = sim.n)
+#~ data.x[1,] = c(rnorm(floor(sim.n/2), 10), rnorm(ceiling(sim.n/2), 100))
+#~ data.yte = c(rexp(floor(sim.n/2), 0.01), rexp(ceiling(sim.n/2), 0.05))
+#~ data.ycen = rexp(sim.n, 0.01)
+#~ data.y = Surv(pmin(data.yte, data.ycen), data.yte <= data.ycen)
+
 load("../../data/apgi/gex-surv/34_apgi_data_update_pdac_20131030.RData")
 load("../36_apgi_surv/02_pc1.RData")
-data.x = x[sel.probe, sel.pat]
+data.x = x[sel.probe.unsup, sel.pat]
 data.y = y[sel.pat,]
-result1 = messinaSurv(data.x, data.y, 0.75)
-result2 = messinaSurv(data.x, data.y, 0.75, parallel = TRUE)
+
+result1 = messinaSurv(data.x[1:100,], data.y, 0.7)
+
+library(doMC)
+registerDoMC(cores = 64)
+result2 = messinaSurv(data.x, data.y, 0.7, parallel = TRUE)
+system.time(result3 <- messinaSurv(data.x, data.y, 0.6, parallel = TRUE))
+
+system.time(result4 <- messinaSurv(data.x, data.y, 2, "coxcoef", parallel = TRUE))
