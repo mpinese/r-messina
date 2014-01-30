@@ -1,6 +1,7 @@
 
 messinaSurvObjectiveFunc = function(x, y, func)
 {
+#	if (func == "tau" || func == "reltau")
 	if (func == "tau")
 	{
 		counts = survival:::survConcordance.fit(y, x)
@@ -9,7 +10,15 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		tied.time = counts["tied.time"]
 		tied.risk = counts["tied.risk"]
 		tied = tied.time + tied.risk
-		return((agree+tied/2)/(agree+disagree+tied))
+		tau = (agree+tied/2)/(agree+disagree+tied)
+
+		return(tau)
+		#~ if (func == "tau")		return(tau)
+
+		#~ n0 = sum(!x)
+		#~ n1 = sum(x)
+		#~ taumax = 0.5 + (n0*n1) / (n0+n1)^2
+		#~ return(tau / taumax)
 	}
 	else if (func == "coxcoef")
 	{
@@ -26,6 +35,7 @@ messinaSurvObjectiveFunc = function(x, y, func)
 
 messinaSurvDoesObjectivePass = function(cutoff_obj, obj_min, obj_func)
 {
+#	if (obj_func == "tau" || obj_func == "reltau")
 	if (obj_func == "tau")
 	{
 		cutoff_obj_good_positive = (cutoff_obj >= obj_min) & (!is.na(cutoff_obj))
@@ -216,6 +226,7 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	
 	# If fitting failed, set performance to the no-information value
 	temp = boot_objs
+#	temp[is.na(temp)] = c("tau" = 0.5, "reltau" = 0.5, "coxcoef" = 0)[obj_func]
 	temp[is.na(temp)] = c("tau" = 0.5, "coxcoef" = 0)[obj_func]
 	
 	# Find the rows of x (if any) that passed the performance criterion on
@@ -227,8 +238,6 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	cat("Final training...\n")
 	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
 	
-#	result = list(summary = data.frame(PassedObj = obj_passes, MeanObj = mean_obj, Threshold = fits$Threshold, Margin = fits$Margin, Direction = fits$Direction), boot.objs = boot_objs, settings = list(obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, test_fraction = test_fraction, seed = seed))
-#	class(result) = "MessinaSurvResult"
     result = list(  problem = "survival",
                     parameters = list(  x = x, 
                                         y = y, 
@@ -252,30 +261,3 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 }
 
 
-
-
-library(survival)
-library(plyr)
-
-#~ set.seed(1234)
-#~ sim.n = 100
-#~ sim.m = 10
-#~ data.x = matrix(runif(sim.m*sim.n), nrow = sim.m, ncol = sim.n)
-#~ data.x[1,] = c(rnorm(floor(sim.n/2), 10), rnorm(ceiling(sim.n/2), 100))
-#~ data.yte = c(rexp(floor(sim.n/2), 0.01), rexp(ceiling(sim.n/2), 0.05))
-#~ data.ycen = rexp(sim.n, 0.01)
-#~ data.y = Surv(pmin(data.yte, data.ycen), data.yte <= data.ycen)
-
-load("../../data/apgi/gex-surv/34_apgi_data_update_pdac_20131030.RData")
-load("../36_apgi_surv/02_pc1.RData")
-data.x = x[sel.probe.unsup, sel.pat]
-data.y = y[sel.pat,]
-
-result1 = messinaSurv(data.x[1:100,], data.y, 0.7)
-
-library(doMC)
-registerDoMC(cores = 64)
-result2 = messinaSurv(data.x, data.y, 0.7, parallel = TRUE)
-system.time(result3 <- messinaSurv(data.x, data.y, 0.6, parallel = TRUE))
-
-system.time(result4 <- messinaSurv(data.x, data.y, 2, "coxcoef", parallel = TRUE))
