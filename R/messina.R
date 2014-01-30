@@ -58,7 +58,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (!is.numeric(n_boot))			stop(sprintf("Error: Invalid value for number of bootstrap iterations n_boot: %s", str(n_boot)))
 	if (ncol(x) < 3)					stop(sprintf("Error: Too few samples (%d).  Messina requires at least 3 samples.", ncol(x)))
 	if (sum(y) == 0 || sum(!y) == 0)	stop(sprintf("Error: All samples are of the same class.  Messina requires samples in each class to operate."))
-	if (ncol(x) != length(y))			stop(sprintf("Error: Inconsistent input data sizes.  Number of rows of data x (%d) does not equal length of class labels y (%d).", nrow(x), length(y)))
+	if (ncol(x) != length(y))			stop(sprintf("Error: Inconsistent input data sizes.  Number of columns of data x (%d) does not equal length of class labels y (%d).", ncol(x), length(y)))
 	if (min_sens <= 0 || min_sens > 1)	stop(sprintf("Error: Invalid value for minimum acceptable sensitivity parameter (%.3f).  Minimum acceptable sensitivity must be in (0, 1].", min_sens))
 	if (min_spec <= 0 || min_spec > 1)	stop(sprintf("Error: Invalid value for minimum acceptable specificity parameter (%.3f).  Minimum acceptable specificity must be in (0, 1].", min_spec))
 	if (f_train <= 0 || f_train >= 1)	stop(sprintf("Error: Invalid value for training sample fraction f_train (%.3f).  Training sample fraction must be in (0, 1), and preferably >= 0.5.", f_train))
