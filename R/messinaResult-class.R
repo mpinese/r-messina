@@ -41,7 +41,7 @@ messinaPlot = function(result, i)
 
 calcKaplanMeierEstimates = function(y, x)
 {
-	xvals = as.character(unique(x))
+	xvals = sort(as.character(unique(x)))
 	result = llply(xvals, 
 		function(xi)
 		{
@@ -63,7 +63,7 @@ calcKaplanMeierEstimatesOnBootstrapSample = function(y, x)
 
 calcBootstrapKaplanMeierEstimates = function(y, x, nboot)
 {
-	xvals = as.character(unique(x))
+	xvals = sort(as.character(unique(x)))
 	results1 = rlply(nboot, calcKaplanMeierEstimatesOnBootstrapSample(y, x))
 	results2 = llply(xvals, function(xi) llply(results1, function(ri) ri[[xi]]))
 	names(results2) = xvals
@@ -92,25 +92,79 @@ calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(un
 }
 
 
+messinaKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
+{
+	stopifnot(all(group %in% c(TRUE, FALSE, 0, 1)))
+	group = group*1
+	
+	full_km = calcKaplanMeierEstimates(y, group)
 
-library(survival)
-set.seed(1234)
-sim.n = 100
-sim.m = 10
-data.x = matrix(runif(sim.m*sim.n), nrow = sim.m, ncol = sim.n)
-data.x[1,] = c(rnorm(floor(sim.n/2), 10), rnorm(ceiling(sim.n/2), 20))
-#data.yte = c(rnorm(floor(sim.n/2), 150, 10), rnorm(ceiling(sim.n/2), 100, 10))
-data.yte = c(rexp(floor(sim.n/2), 0.01), rexp(ceiling(sim.n/2), 0.05))
-data.ycen = rexp(sim.n, 0.01)
-data.ys = Surv(pmin(data.yte, data.ycen), data.yte <= data.ycen)
+	if (bootstrap_type != "none")
+	{
+		boot_times = sort(unique(y[,1]))
+		boot_km = calcBootstrapKaplanMeierEstimatesAtTimes(y, group, nboot, boot_times)
+		names(boot_km) = c("0", "1")
 
-library(plyr)
-calcKaplanMeierEstimates(data.ys, data.x[1,] > 15)
-calcKaplanMeierEstimatesOnBootstrapSample(data.ys, data.x[1,] > 15)
-calcBootstrapKaplanMeierEstimates(data.ys, data.x[1,] > 15, nboot = 2)
-calcBootstrapKaplanMeierEstimatesAtTimes(data.ys, data.x[1,] > 15, nboot = 2)
+		if (bootstrap_type == "ci")
+		{
+			boot_km_c = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, median, na.rm = TRUE))
+			boot_km_l = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = 1-bootstrap_ci, na.rm = TRUE))
+			boot_km_u = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = bootstrap_ci, na.rm = TRUE))
+		}
+		else
+		{
+			boot_km_sd = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, sd, na.rm = TRUE))
+			boot_km_c = llply(c("0", "1"), function(group) rowMeans(boot_km[[group]][,-1]))
+			names(boot_km_c) = c("0", "1")
+			boot_km_l = llply(c("0", "1"), function(group) boot_km_c[[group]] - boot_km_sd[[group]])
+			boot_km_u = llply(c("0", "1"), function(group) boot_km_c[[group]] + boot_km_sd[[group]])
+			names(boot_km_l) = c("0", "1")
+			names(boot_km_u) = c("0", "1")
+		}
+		
+		boot_data = data.frame(	Time = rep(boot_times, 2), 
+								Survival = c(boot_km_c[["0"]], boot_km_c[["1"]]),
+								SurvMin = c(boot_km_l[["0"]], boot_km_l[["1"]]),
+								SurvMax = c(boot_km_u[["0"]], boot_km_u[["1"]]),
+								Group = rep(c("<= Threshold", "> Threshold"), each = length(boot_times)))
 
-fit = messinaSurv(data.x, data.ys, 0.6, "tau")
+		boot_poly_data = data.frame(	Time = rep(rep(c(boot_times[-1], rev(boot_times)[-1]), each = 2), 2),
+										Survival = c(c(rep(boot_km_u[["0"]][-1], each = 2)[-1], rep(rev(boot_km_l[["0"]]), each = 2)[-(length(boot_times)*2)]),
+													 c(rep(boot_km_u[["1"]][-1], each = 2)[-1], rep(rev(boot_km_l[["1"]]), each = 2)[-(length(boot_times)*2)])),
+										Group = rep(c("<= Threshold", "> Threshold"), each = (length(boot_times)-1)*4))
+		boot_poly_data = boot_poly_data[!is.na(boot_poly_data$Survival),]
+	}
+	
+	full_data = data.frame(	Time = c(full_km[["0"]]$time, full_km[["1"]]$time), 
+							Survival = c(full_km[["0"]]$surv, full_km[["1"]]$surv), 
+							Group = factor(c(rep("<= Threshold", nrow(full_km[["0"]])), rep("> Threshold", nrow(full_km[["1"]])))))
+		
+	if (bootstrap_type != "none")
+	{
+		theplot = ggplot(data = full_data, aes(x = Time, y = Survival, group = Group, col = Group)) +
+			geom_polygon(data = boot_poly_data, mapping = aes(x = Time, y = Survival, group = Group, fill = Group), alpha = 0.2, linetype = 0) + 
+			geom_step(direction = "hv") + 
+			geom_step(data = boot_data, direction = "hv", alpha = 0.2)
+	}
+	else
+	{
+		theplot = ggplot(data = full_data, aes(x = Time, y = Survival, group = Group, col = Group)) +
+			geom_step(direction = "hv")
+	}
+	theplot	
+}
+
+
+messinaObjPlot = function(fit)
+{
+	plot_data = data.frame(Objective = fit$obj, Cutoff = fit$cutoffs)
+	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
+		geom_line(alpha = 0.5) + 
+		geom_point() + 
+		geom_hline(yintercept = fit$obj_min, lty = "dotted") + 
+		geom_vline(xintercept = c(fit$threshold, fit$threshold - fit$margin/2, fit$threshold + fit$margin/2), lty = c("solid", "dashed", "dashed"), alpha = c(1, 0.5, 0.5))
+	theplot
+}
 
 
 messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50))
@@ -128,89 +182,42 @@ messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_
 
 	x = result$parameters$x[i,]
 	y = result$parameters$y
+	fit = result$fits[[i]]
 	
 	threshold = result$classifier$threshold[i]
 	margin = result$margin[i]
 
-	full_km_lower = calcKaplanMeierEstimates(y, (x > (threshold - margin/2))*1)
-	full_km_upper = calcKaplanMeierEstimates(y, (x > (threshold + margin/2))*1)
-	full_km_threshold = calcKaplanMeierEstimates(y, (x > threshold)*1)
-
-	if (bootstrap_type != "none")
-	{
-		boot_times = sort(unique(y[,1]))
-		boot_km_lower = calcBootstrapKaplanMeierEstimatesAtTimes(y, (x > (threshold - margin/2))*1, nboot, boot_times)
-		boot_km_upper = calcBootstrapKaplanMeierEstimatesAtTimes(y, (x > (threshold + margin/2))*1, nboot, boot_times)
-		boot_km_threshold = calcBootstrapKaplanMeierEstimatesAtTimes(y, (x > threshold)*1, nboot, boot_times)
-
-		if (bootstrap_type == "ci")
-		{
-			boot_km_threshold_l = laply(boot_km_threshold, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = 1-bootstrap_ci, na.rm = TRUE))
-			boot_km_threshold_u = laply(boot_km_threshold, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = bootstrap_ci, na.rm = TRUE))
-			boot_km_threshold_c = laply(boot_km_threshold, function(boots) aaply(boots[,-1,drop=FALSE], 1, median, na.rm = TRUE))
-			names(boot_km_threshold_l) = c("0", "1")
-			names(boot_km_threshold_c) = c("0", "1")
-			names(boot_km_threshold_u) = c("0", "1")
-		}
-		else
-		{
-			boot_km_threshold_sd = llply(boot_km_threshold, function(boots) aaply(boots[,-1,drop=FALSE], 1, sd, na.rm = TRUE))
-#			boot_km_threshold_l = llply(c("0", "1"), function(group) rowMeans(boot_km_threshold[[group]]) - boot_km_threshold_sd[[group]])
-			boot_km_threshold_l = llply(c("0", "1"), function(group) -boot_km_threshold_sd[[group]])
-			boot_km_threshold_c = llply(c("0", "1"), function(group) rowMeans(boot_km_threshold[[group]]))
-#			boot_km_threshold_u = llply(c("0", "1"), function(group) rowMeans(boot_km_threshold[[group]]) + boot_km_threshold_sd[[group]])
-			boot_km_threshold_u = llply(c("0", "1"), function(group) boot_km_threshold_sd[[group]])
-			names(boot_km_threshold_l) = c("0", "1")
-			names(boot_km_threshold_c) = c("0", "1")
-			names(boot_km_threshold_u) = c("0", "1")
-		}
-		
-		boot_data = data.frame(	Time = rep(boot_times, 2), 
-								Survival = c(boot_km_threshold_c[["0"]], boot_km_threshold_c[["1"]]),
-								Delta1 = c(boot_km_threshold_l[["0"]], boot_km_threshold_l[["1"]]),
-								Delta2 = c(boot_km_threshold_u[["0"]], boot_km_threshold_u[["1"]]),
-#								SurvMin = c(boot_km_threshold_l[["0"]], boot_km_threshold_l[["1"]]),
-#								SurvMax = c(boot_km_threshold_u[["0"]], boot_km_threshold_u[["1"]]),
-								Group = rep(c("<= Threshold", "> Threshold"), each = length(boot_times)))
-
-		#~ boot_data = data.frame(	Time = rep(boot_times, times = ncol(boot_km_threshold[["0"]]) + ncol(boot_km_threshold[["1"]]) - 2), 
-								#~ Survival = c(as.vector(boot_km_threshold[["0"]][,-1,drop = FALSE]), as.vector(boot_km_threshold[["1"]][,-1,drop = FALSE])),
-								#~ Group = c(rep("<= Threshold", length(boot_times) * (ncol(boot_km_threshold[["0"]]) - 1)), rep("> Threshold", length(boot_times) * (ncol(boot_km_threshold[["1"]]) - 1))),
-								#~ Run = c(rep(1:(ncol(boot_km_threshold[["0"]]) - 1), each = length(boot_times)), rep(1:(ncol(boot_km_threshold[["1"]]) - 1), each = length(boot_times))))
-		#~ boot_data$Group2 = factor(paste(boot_data$Group, boot_data$Run, sep = ""))
-	}
-	else	{ boot_data = NULL }
+	km_plot_threshold = messinaKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Threshold")
+	km_plot_lower_margin = messinaKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Lower Margin")
+	km_plot_upper_margin = messinaKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Upper Margin")
 	
-	full_data = data.frame(	Time = c(full_km_threshold[["0"]]$time, full_km_threshold[["1"]]$time), 
-							Survival = c(full_km_threshold[["0"]]$surv, full_km_threshold[["1"]]$surv), 
-							Group = factor(c(rep("<= Threshold", nrow(full_km_threshold[["0"]])), rep("> Threshold", nrow(full_km_threshold[["1"]])))))
+	obj_plot = messinaObjPlot(fit) + ggtitle("Objective Function")
 
-	#~ # Original plot: plots all bootstrap paths.  Gets messy because of shared times.
-	#~ theplot = ggplot(data = full_data, aes(x = Time, y = Survival, group = Group, col = Group)) +
-		#~ geom_step(direction = "hv") +
-		#~ geom_step(data = boot_data, mapping = aes(x = Time, y = Survival, group = Group2, col = Group), direction = "hv", alpha = 0.1)
-	#~ theplot	
-
-	theplot = ggplot(data = full_data, aes(x = Time, y = Survival, group = Group, col = Group)) +
-		geom_step(direction = "hv") +
-		geom_ribbon(data = boot_data, mapping = aes(x = Time, y = Survival, ymax =  + Delta2, ymin =  + Delta1, group = Group, col = Group), alpha = 0.1)
-	theplot	
-
+	grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin)
 	# Plots: Objective, KM at optimal threshold,
 	# KM at lower limit, KM at upper limit.
 }
 
-#library(ggplot2)
-debug(messinaSurvPlot)
+
+library(survival)
+set.seed(1234)
+sim.n = 100
+sim.m = 10
+data.x = matrix(runif(sim.m*sim.n), nrow = sim.m, ncol = sim.n)
+data.x[1,] = c(rnorm(floor(sim.n/2), 10), rnorm(ceiling(sim.n/2), 20))
+data.yte = c(rexp(floor(sim.n/2), 0.01), rexp(ceiling(sim.n/2), 0.05))
+data.ycen = rexp(sim.n, 0.01)
+data.ys = Surv(pmin(data.yte, data.ycen), data.yte <= data.ycen)
+
+library(plyr)
+library(ggplot2)
+library(gridExtra)
+
+fit = messinaSurv(data.x, data.ys, 0.6)
+
+#debug(messinaSurvPlot)
 messinaSurvPlot(fit, bootstrap_type = "stdev")
-messinaSurvPlot(fit, bootstrap_type = "ci", nboot = 20)
-
-
-ggplot(data, aes(x = Time, y = Survival, group = Group, colour = Group)) + geom_step(direction = "hv") + 
-	geom_step(data = boot_data, aes = aes(x = Time, y = Survival, group = Group2, colour = Group), direction = "hv", alpha = 0.5)
-
-ggplot(data, aes(x = Time, y = Survival, group = Group)) + geom_step(direction = "hv") + 
-	geom_line(data = boot_data[,c("Time", "Survival", "Group2")], aes = aes(x = Time, y = Survival, group = Group2), direction = "hv", alpha = 0.5)
+messinaSurvPlot(fit, bootstrap_type = "ci")
 
 
 #' Plot the results of a Messina fit.
