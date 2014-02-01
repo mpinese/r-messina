@@ -151,21 +151,24 @@ messinaSurvSingleX = function(x1, y, obj_min, obj_func, n_boot, n_test)
 
 messinaSurvTrainOnSubset = function(x, y, obj_min, obj_func, subset, parallel)
 {
-	fits = ldply(1:nrow(x), 
+	fits = llply(1:nrow(x), 
 		function(xi) 
 		{ 
 			if (subset[xi])
 			{
 				fit = messinaSurvTrain(x[xi,], y, obj_min, obj_func)
-				return(c(fit$threshold, fit$margin, fit$direction))
+#				return(c(fit$threshold, fit$margin, fit$direction))
+				return(fit)
 			}
 			else
 			{
-				return(c(NA, NA, NA))
+#				return(c(NA, NA, NA))
+#				return(list())
+				return(NULL)
 			}
 		}, .parallel = parallel, .progress = "time")
 	
-	colnames(fits) = c("Threshold", "Margin", "Direction")
+#	colnames(fits) = c("Threshold", "Margin", "Direction")
 	return(fits)
 }
 
@@ -238,6 +241,10 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	cat("Final training...\n")
 	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
 	
+	thresholds = sapply(fits, function(f) ifelse(is.null(f), NA, f$threshold))
+	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1
+	margins = sapply(fits, function(f) ifelse(is.null(f), NA, f$margin))
+	
     result = list(  problem = "survival",
                     parameters = list(  x = x, 
                                         y = y, 
@@ -247,10 +254,11 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
                                         n_boot = n_boot, 
                                         seed = seed),
                     classifier = list(  type = as.factor(ifelse(obj_passes, "Threshold", NA)), 
-                                        threshold = fits$Threshold, 
+                                        threshold = thresholds, 
                                         ptrue = rep(NA, nrow(x)),
-                                        posk = (fits$Direction == 1)), 
-                    margin = fits$Margin, 
+                                        posk = posks), 
+					fits = fits,
+                    margin = margins, 
                     psuccessful = rowMeans(!is.na(boot_objs)),
                     passed = obj_passes,
                     perf = list(mean = mean_obj, var = NA),
