@@ -1,7 +1,6 @@
 
 messinaSurvObjectiveFunc = function(x, y, func)
 {
-#	if (func == "tau" || func == "reltau")
 	if (func == "tau")
 	{
 		counts = survival:::survConcordance.fit(y, x)
@@ -13,12 +12,6 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		tau = (agree+tied/2)/(agree+disagree+tied)
 
 		return(tau)
-		#~ if (func == "tau")		return(tau)
-
-		#~ n0 = sum(!x)
-		#~ n1 = sum(x)
-		#~ taumax = 0.5 + (n0*n1) / (n0+n1)^2
-		#~ return(tau / taumax)
 	}
 	else if (func == "coxcoef")
 	{
@@ -35,7 +28,6 @@ messinaSurvObjectiveFunc = function(x, y, func)
 
 messinaSurvDoesObjectivePass = function(cutoff_obj, obj_min, obj_func)
 {
-#	if (obj_func == "tau" || obj_func == "reltau")
 	if (obj_func == "tau")
 	{
 		cutoff_obj_good_positive = (cutoff_obj >= obj_min) & (!is.na(cutoff_obj))
@@ -157,18 +149,14 @@ messinaSurvTrainOnSubset = function(x, y, obj_min, obj_func, subset, parallel)
 			if (subset[xi])
 			{
 				fit = messinaSurvTrain(x[xi,], y, obj_min, obj_func)
-#				return(c(fit$threshold, fit$margin, fit$direction))
 				return(fit)
 			}
 			else
 			{
-#				return(c(NA, NA, NA))
-#				return(list())
 				return(NULL)
 			}
 		}, .parallel = parallel, .progress = "time")
 	
-#	colnames(fits) = c("Threshold", "Margin", "Direction")
 	return(fits)
 }
 
@@ -229,7 +217,6 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	
 	# If fitting failed, set performance to the no-information value
 	temp = boot_objs
-#	temp[is.na(temp)] = c("tau" = 0.5, "reltau" = 0.5, "coxcoef" = 0)[obj_func]
 	temp[is.na(temp)] = c("tau" = 0.5, "coxcoef" = 0)[obj_func]
 	
 	# Find the rows of x (if any) that passed the performance criterion on
@@ -239,7 +226,8 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	
 	# Train MessinaSurv on just those rows of x that passed.
 	cat("Final training...\n")
-	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
+#	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
+	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes | TRUE, parallel = parallel)
 	
 	thresholds = sapply(fits, function(f) ifelse(is.null(f), NA, f$threshold))
 	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1

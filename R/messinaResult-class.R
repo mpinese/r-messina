@@ -9,16 +9,22 @@
 NULL
 
 
-messinaPlot = function(result, i)
+messinaPlot = function(result, i = NULL)
 {
 	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 	
 	if (is.null(i))
 	{
+		if (!any(result$passed))
+		{
+			stop("Error: Index of feature to plot was not specified (i == NULL), so best passing feature would be selected.  However, no features passed performance criteria.  Please explicitly specify feature to plot by setting 'i' to a feature index in the plot call.")
+		}
 		temp.margin = result$margin
 		temp.margin[!result$passed] = NA
 		i = which.max(temp.margin)
 	}
+	feature = ifelse(is.null(result$parameters$features), sprintf("index %d", i), result$parameters$features[i])
+	
 	x = result$parameters$x[i,]
 	samples = names(x)
 	if (is.null(samples))	samples = seq_along(x)
@@ -35,7 +41,7 @@ messinaPlot = function(result, i)
 		geom_point(stat = "identity") +
 		geom_hline(yintercept = c(threshold - margin/2, threshold, threshold + margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7) + 
 		xlab("Sample") +
-		ggtitle(result$parameters$features[i]) + coord_flip()
+		ggtitle(sprintf("Messina Fit: Feature %s", feature)) + coord_flip()
 }
 
 
@@ -92,7 +98,7 @@ calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(un
 }
 
 
-messinaKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
+messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
 {
 	stopifnot(all(group %in% c(TRUE, FALSE, 0, 1)))
 	group = group*1
@@ -155,7 +161,7 @@ messinaKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
 }
 
 
-messinaObjPlot = function(fit)
+messinaSurvObjPlot = function(fit)
 {
 	plot_data = data.frame(Objective = fit$obj, Cutoff = fit$cutoffs)
 	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
@@ -175,6 +181,10 @@ messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_
 	
 	if (is.null(i))
 	{
+		if (!any(result$passed))
+		{
+			stop("Error: Index of feature to plot was not specified (i == NULL), so best passing feature would be selected.  However, no features passed performance criteria.  Please explicitly specify feature to plot by setting 'i' to a feature index in the plot call.")
+		}
 		temp.margin = result$margin
 		temp.margin[!result$passed] = NA
 		i = which.max(temp.margin)
@@ -183,41 +193,21 @@ messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_
 	x = result$parameters$x[i,]
 	y = result$parameters$y
 	fit = result$fits[[i]]
+	feature = ifelse(is.null(result$parameters$features), sprintf("index %d", i), result$parameters$features[i])
 	
 	threshold = result$classifier$threshold[i]
 	margin = result$margin[i]
 
-	km_plot_threshold = messinaKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Threshold")
-	km_plot_lower_margin = messinaKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Lower Margin")
-	km_plot_upper_margin = messinaKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Upper Margin")
+	km_plot_threshold = messinaSurvKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Threshold")
+	km_plot_lower_margin = messinaSurvKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Lower Margin")
+	km_plot_upper_margin = messinaSurvKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Upper Margin")
 	
-	obj_plot = messinaObjPlot(fit) + ggtitle("Objective Function")
+	obj_plot = messinaSurvObjPlot(fit) + ggtitle("Objective Function")
 
-	grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin)
+	grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
 	# Plots: Objective, KM at optimal threshold,
 	# KM at lower limit, KM at upper limit.
 }
-
-
-library(survival)
-set.seed(1234)
-sim.n = 100
-sim.m = 10
-data.x = matrix(runif(sim.m*sim.n), nrow = sim.m, ncol = sim.n)
-data.x[1,] = c(rnorm(floor(sim.n/2), 10), rnorm(ceiling(sim.n/2), 20))
-data.yte = c(rexp(floor(sim.n/2), 0.01), rexp(ceiling(sim.n/2), 0.05))
-data.ycen = rexp(sim.n, 0.01)
-data.ys = Surv(pmin(data.yte, data.ycen), data.yte <= data.ycen)
-
-library(plyr)
-library(ggplot2)
-library(gridExtra)
-
-fit = messinaSurv(data.x, data.ys, 0.6)
-
-#debug(messinaSurvPlot)
-messinaSurvPlot(fit, bootstrap_type = "stdev")
-messinaSurvPlot(fit, bootstrap_type = "ci")
 
 
 #' Plot the results of a Messina fit.
@@ -254,6 +244,7 @@ plot.MessinaResult = function(result, ...)
 		stop(sprintf("Unknown Messina problem type: \"%s\"", result$problem))
 	}
 }
+
 
 
 #' Print a summary of the results of a Messina fit.
@@ -322,63 +313,3 @@ toptable.MessinaResult = function(result, maxn, minmar)
 	
 	return(invisible(summary))
 }
-
-
-
-
-
-
-
-
-
-
-
-
-	
-#~ plotObj = function(x, y, func, inv = FALSE, ...)
-#~ {
-	#~ plotx = seq(min(x), max(x), length.out = 500)
-	#~ if (inv == TRUE)
-	#~ {
-		#~ ploty = sapply(plotx, function(xi) messinaSurvObjectiveFunc(x < xi, y, func))
-	#~ }
-	#~ else
-	#~ {
-		#~ ploty = sapply(plotx, function(xi) messinaSurvObjectiveFunc(x > xi, y, func))
-	#~ }
-	
-	#~ plot(ploty ~ plotx, ...)
-#~ }
-
-
-#~ plotTrain = function(x, y, fit, ...)
-#~ {
-	#~ if (is.na(fit$threshold))
-	#~ {
-		#~ plot.new()
-		#~ plot.new()
-		#~ plot.new()
-	#~ }
-	#~ else
-	#~ {
-		#~ xt = x * c(-1, 1)[1*(fit$direction == 1) + 1]
-		#~ tt = fit$threshold * c(-1, 1)[1*(fit$direction == 1) + 1]
-		#~ plot(survfit(y ~ I(xt > tt)), main = "Separation at Threshold", xlab = "Time", ylab = "Surviving fraction", col = c("red", "blue"))
-		#~ tt = (fit$threshold - fit$margin/2) * c(-1, 1)[1*(fit$direction == 1) + 1]
-		#~ plot(survfit(y ~ I(xt > tt)), main = "Separation at Lower Bound", xlab = "Time", ylab = "Surviving fraction", col = c("red", "blue"))
-		#~ tt = (fit$threshold + fit$margin/2) * c(-1, 1)[1*(fit$direction == 1) + 1]
-		#~ plot(survfit(y ~ I(xt > tt)), main = "Separation at Upper Bound", xlab = "Time", ylab = "Surviving fraction", col = c("red", "blue"))
-	#~ }
-	#~ plot(fit$obj ~ fit$cutoffs, main = "Objective Surface", xlab = "Threshold", ylab = "Objective", type = "o", ...)
-	#~ abline(v = c(fit$threshold, fit$threshold - fit$margin/2, fit$threshold + fit$margin/2), lty = c("solid", "dashed", "dashed"))
-	#~ abline(h = fit$obj.min, lty = "dotted", col = "grey")
-#~ }
-
-
-#~ summarizeResult = function(result)
-#~ {
-	#~ temp = result$summary[result$summary$PassedObj == TRUE,]
-	#~ temp = temp[order(-temp$Margin),]
-	#~ temp
-#~ }
-
