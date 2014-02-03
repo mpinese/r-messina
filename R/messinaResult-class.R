@@ -37,11 +37,17 @@ messinaPlot = function(result, i = NULL)
 
 	data = data.frame(Sample = samples, Value = x, Class = ordered(y*1))
 
-	ggplot(data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
+	theplot = ggplot(data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
 		geom_point(stat = "identity") +
-		geom_hline(yintercept = c(threshold - margin/2, threshold, threshold + margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7) + 
 		xlab("Sample") +
 		ggtitle(sprintf("Messina Fit: Feature %s", feature)) + coord_flip()
+
+	if (!is.na(threshold))
+	{
+		theplot = theplot + geom_hline(yintercept = c(threshold - margin/2, threshold, threshold + margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7)
+	}
+	
+	theplot
 }
 
 
@@ -96,6 +102,56 @@ calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(un
 	names(ests_at_times) = names(ests)
 	ests_at_times
 }
+
+
+messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot)
+{
+	group = factor(rep("GROUP", nrow(y)))
+	full_km = calcKaplanMeierEstimates(y, group)[[1]]
+
+	if (bootstrap_type != "none")
+	{
+		boot_times = sort(unique(y[,1]))
+		boot_km = calcBootstrapKaplanMeierEstimatesAtTimes(y, group, nboot, boot_times)[[1]]
+
+		if (bootstrap_type == "ci")
+		{
+			boot_km_c = aaply(boot_km[,-1,drop=FALSE], 1, median, na.rm = TRUE)
+			boot_km_l = aaply(boot_km[,-1,drop=FALSE], 1, quantile, probs = 1-bootstrap_ci, na.rm = TRUE)
+			boot_km_u = aaply(boot_km[,-1,drop=FALSE], 1, quantile, probs = bootstrap_ci, na.rm = TRUE)
+		}
+		else
+		{
+			boot_km_sd = aaply(boot_km[,-1,drop=FALSE], 1, sd, na.rm = TRUE)
+			boot_km_c = rowMeans(boot_km[,-1])
+			boot_km_l = boot_km_c - boot_km_sd
+			boot_km_u = boot_km_c + boot_km_sd
+		}
+		
+		boot_data = data.frame(	Time = boot_times, Survival = boot_km_c, SurvMin = boot_km_l, SurvMax = boot_km_u)
+
+		boot_poly_data = data.frame(	Time = rep(c(boot_times[-1], rev(boot_times)[-1]), each = 2),
+										Survival = c(rep(boot_km_u[-1], each = 2)[-1], rep(rev(boot_km_l), each = 2)[-(length(boot_times)*2)]))
+		boot_poly_data = boot_poly_data[!is.na(boot_poly_data$Survival),]
+	}
+	
+	full_data = data.frame(	Time = full_km$time, Survival = full_km$surv)
+		
+	if (bootstrap_type != "none")
+	{
+		theplot = ggplot(data = full_data, aes(x = Time, y = Survival)) +
+			geom_polygon(data = boot_poly_data, mapping = aes(x = Time, y = Survival), alpha = 0.2, linetype = 0) + 
+			geom_step(direction = "hv") + 
+			geom_step(data = boot_data, direction = "hv", alpha = 0.2)
+	}
+	else
+	{
+		theplot = ggplot(data = full_data, aes(x = Time, y = Survival)) +
+			geom_step(direction = "hv")
+	}
+	theplot	
+}
+
 
 
 messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
@@ -168,7 +224,10 @@ messinaSurvObjPlot = function(fit)
 		geom_line(alpha = 0.5) + 
 		geom_point() + 
 		geom_hline(yintercept = fit$obj_min, lty = "dotted") + 
-		geom_vline(xintercept = c(fit$threshold, fit$threshold - fit$margin/2, fit$threshold + fit$margin/2), lty = c("solid", "dashed", "dashed"), alpha = c(1, 0.5, 0.5))
+	if (!is.na(fit$threshold))
+	{
+		theplot = theplot + geom_vline(xintercept = c(fit$threshold, fit$threshold - fit$margin/2, fit$threshold + fit$margin/2), lty = c("solid", "dashed", "dashed"), alpha = c(1, 0.5, 0.5))
+	}
 	theplot
 }
 
@@ -198,15 +257,24 @@ messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_
 	threshold = result$classifier$threshold[i]
 	margin = result$margin[i]
 
-	km_plot_threshold = messinaSurvKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Threshold")
-	km_plot_lower_margin = messinaSurvKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Lower Margin")
-	km_plot_upper_margin = messinaSurvKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Upper Margin")
-	
 	obj_plot = messinaSurvObjPlot(fit) + ggtitle("Objective Function")
 
-	grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
-	# Plots: Objective, KM at optimal threshold,
-	# KM at lower limit, KM at upper limit.
+	if (is.na(threshold))
+	{
+		km_plot_all = messinaSurvKMplotSingleGroup(y, bootstrap_type, bootstrap_ci, nboot) + ggtitle("KM of Full Cohort\n(no valid threshold found)")
+		
+		theplot = grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+	}
+	else
+	{
+		km_plot_threshold = messinaSurvKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Threshold")
+		km_plot_lower_margin = messinaSurvKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Lower Margin")
+		km_plot_upper_margin = messinaSurvKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle("Separation at Upper Margin")
+		
+		theplot = grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+	}
+	
+	theplot
 }
 
 
