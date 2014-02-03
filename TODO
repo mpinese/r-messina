@@ -22,5 +22,6 @@ Test running without foreach
 TODO before deployment:
   * Update entries in src/messina-package.R
   * Update DESCRIPTION
+  * Change copyright to include 2014
   
   
