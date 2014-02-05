@@ -4,12 +4,13 @@
 #' 
 #' @name messinaResult-class
 #' @seealso \code{\link{messina}}
+#' @seealso \code{\link{messinaSurv}}
 #' @references TODO
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 NULL
 
 
-messinaPlot = function(result, i = NULL)
+messinaPlot = function(result, i = NULL, type = "point")
 {
 	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 	
@@ -38,10 +39,13 @@ messinaPlot = function(result, i = NULL)
 	data = data.frame(Sample = samples, Value = x, Class = ordered(y*1))
 
 	theplot = ggplot(data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
-		geom_point(stat = "identity") +
 		xlab("Sample") +
 		ggtitle(sprintf("Messina Fit: Feature %s", feature)) + 
 		coord_flip()
+
+	if (type == "point")	{ theplot = theplot + geom_point(stat = "identity") }
+	else if (type == "bar")	{ theplot = theplot + geom_bar(stat = "identity", width = 0.5) }
+	else 					{ stop(sprintf("Invalid Messina plot type: \"%s\"", type)) }	
 
 	if (!is.na(threshold))
 	{

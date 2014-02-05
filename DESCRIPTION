@@ -1,11 +1,11 @@
 Package: messina
 Type: Package
-Title: 
+Title: TODO
 Version: 0.99.0
 Date: 2013-06-03
 Authors@R: person("Mark", "Pinese", email = "m.pinese@garvan.org.au", role =
     list("aut", "cre", "cph"))
-Description: 
+Description: TODO
 License: EPL (>= 1.0)
 Depends:
     R (>= 2.13.0),
