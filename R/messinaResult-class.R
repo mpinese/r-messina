@@ -10,51 +10,226 @@
 NULL
 
 
-messinaPlot = function(result, i = NULL, type = "point")
+setOldClass("Surv")
+setClassUnion("MessinaY", c("Surv", "vector"))
+
+
+.MessinaParameters <- setClass(	"MessinaParameters",
+								slots = c(	x = "matrix",
+											y = "MessinaY",
+											perf_requirement = "list",		# For MessinaSurvResult, list with names objective_type, min_objective.  For MessinaClassResult, list with names min_sensitivity, min_specificity
+											training_fraction = "numeric",
+											num_bootstraps = "integer",
+											prng_seed = "integer"))
+
+.MessinaFit <- setClass("MessinaFit",
+						slots = c(	summary = "data.frame",
+									objective_surfaces = "list"))			# list of data.frames, each with columns: cutoff, objective (MessinaSurvResult), or cutoff, sensitivity, specificity (MessinaClassResult)
+
+.MessinaResult <- setClass(	"MessinaResult", 
+							slots = c(	problem_type = "character",
+										parameters = "MessinaParameters",
+										perf_estimates = "data.frame",
+										fits = "MessinaFit"))
+
+.MessinaClassResult <- setClass("MessinaClassResult", contains = "MessinaResult")
+
+.MessinaSurvResult <- setClass(	"MessinaSurvResult", contains = "MessinaResult")
+
+
+setMethod("show", signature = "MessinaResult", definition = function(object) 
 {
-	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+	cat("An object of class ", class(object), "\n", sep = "")
+	invisible(NULL)
+})
+
+
+setMethod("plot", signature = "MessinaClassResult", definition = function(object, indices = c(1), sort_features = TRUE, plot_type = "point")
+{
+	#Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 	
-	if (is.null(i))
+	n = nrow(object@parameters@x)
+	
+	if (any(indices > n) || any(indices < 1))
 	{
-		if (!any(result$passed))
-		{
-			stop("Error: Index of feature to plot was not specified (i == NULL), so best passing feature would be selected.  However, no features passed performance criteria.  Please explicitly specify feature to plot by setting 'i' to a feature index in the plot call.")
-		}
-		temp.margin = result$margin
-		temp.margin[!result$passed] = NA
-		i = which.max(temp.margin)
+		warning("Warning: Some feature indices were out of range.  Dropping invalid indices.")
+		indices = indices[indices >= 1 & indices < n]
 	}
-	feature = ifelse(is.null(result$parameters$features), sprintf("index %d", i), result$parameters$features[i])
 	
-	x = result$parameters$x[i,]
-	samples = names(x)
-	if (is.null(samples))	samples = seq_along(x)
-	order = order(x)
-	x = x[order]
-	samples = samples[order]
-	y = result$parameters$y[order]
-	threshold = result$classifier$threshold[i]
-	margin = result$margin[i]
+	if (length(indices) == 0)
+	{
+		return(invisible(NULL))
+	}
+	
+	fit_summary = object@fits@summary
+	
+	feature_perm = 1:n
+	if (sort_features)
+	{
+		feature_perm = c((1:n)[fit_summary$PassedPerf][order(-fit_summary$Margin[fit_summary$PassedPerf])], (1:n)[!fit_summary$PassedPerf])
+	}
+	
+	indices = feature_perm[indices]
+	
+	for (i in indices)
+	{
+		feature = object@parameters@features[i]
+		x = result$parameters$x[i,]
 
-	data = data.frame(Sample = samples, Value = x, Class = ordered(y*1))
+		order = order(x)
+		x = x[order]
+		samples = object@parameters@samples[order]
+		y = object@parameters@y[order]
+		threshold = fit_summary$threshold[i]
+		margin = fit_summary$margin[i]
 
-	theplot = ggplot(data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
-		xlab("Sample") +
-		ggtitle(sprintf("Messina Fit: Feature %s", feature)) + 
-		coord_flip()
+		data = data.frame(Sample = samples, Value = x, Class = ordered(y*1))
 
-	if (type == "point")	{ theplot = theplot + geom_point(stat = "identity") }
-	else if (type == "bar")	{ theplot = theplot + geom_bar(stat = "identity", width = 0.5) }
-	else 					{ stop(sprintf("Invalid Messina plot type: \"%s\"", type)) }	
+		theplot = ggplot(data, aes(x = reorder(Sample, Value), y = Value, fill = Class, colour = Class)) +
+			xlab("Sample") +
+			ggtitle(sprintf("MessinaClass Fit: Feature %s", feature)) + 
+			coord_flip()
+
+		if (type == "point")	{ theplot = theplot + geom_point(stat = "identity") }
+		else if (type == "bar")	{ theplot = theplot + geom_bar(stat = "identity", width = 0.5) }
+		else 					{ stop(sprintf("Invalid Messina plot type: \"%s\"", type)) }	
+
+		if (!is.na(threshold))
+		{
+			theplot = theplot + 
+				geom_hline(yintercept = c(threshold - margin/2, threshold, threshold + margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7)
+		}
+		
+		print(theplot)
+	}
+	
+	invisible(NULL)
+})
+
+
+setMethod("plot", signature = "MessinaSurvResult", definition = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50))
+{
+	if (!(bootstrap_type %in% c("none", "ci", "stdev")))
+	{
+		stop(sprintf("Error: Invalid bootstrap type, \"%s\".  Valid values for bootstrap_type are \"none\", \"ci\", and \"stdev\".", bootstrap_type))
+	}
+
+	if (bootstrap_ci <= 0 || bootstrap_ci >= 1)
+	{
+		stop(sprintf("Error: Invalid value for bootstrap confidence interval percentile, \"%s\".  Valid values for bootstrap_ci are in (0, 1)  (and usually close to 1!).", str(bootstrap_ci)))
+	}
+	
+	if (bootstrap_ci < 0.7)
+	{
+		warning(sprintf("Warning: Unusually low value for bootstrap_ci, %f.  Are you sure you want %.0f%% confidence intervals?  Conventionally, bootstrap_ci should be at least 0.9.\nContinuing anyway.", bootstrap_ci, bootstrap_ci*100))
+	}
+
+	n = nrow(object@parameters@x)
+	
+	if (any(indices > n) || any(indices < 1))
+	{
+		warning("Warning: Some feature indices were out of range.  Dropping invalid indices.")
+		indices = indices[indices >= 1 & indices < n]
+	}
+	
+	if (length(indices) == 0)
+	{
+		return(invisible(NULL))
+	}
+	
+	fit_summary = object@fits@summary
+		
+	feature_perm = 1:n
+	if (sort_features)
+	{
+		feature_perm = c((1:n)[fit_summary$PassedPerf][order(-fit_summary$Margin[fit_summary$PassedPerf])], (1:n)[!fit_summary$PassedPerf])
+	}
+	
+	indices = feature_perm[indices]
+	y = object@parameters@y
+
+	for (i in indices)
+	{
+		x = object@parameters@x[i,]
+		feature = object@parameters@features[i]
+
+		threshold = fit_summary$threshold[i]
+		margin = fit_summary$margin[i]
+
+		obj_plot = messinaSurvObjPlot(object, i) + ggtitle("Objective Function")
+		
+		if (bootstrap_type == "ci")			{ bootstrap_string = sprintf("Shaded area: %.0f%% CI", bootstrap_ci*100) }
+		else if (bootstrap_type == "stdev")	{ bootstrap_string = "Shaded area: +/- 1 SD" }
+		else 								{ bootstrap_string = "" }
+		
+		# TODO:
+		if (is.na(threshold))
+		{
+			km_plot_all = messinaSurvKMplotSingleGroup(y, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("KM of Full Cohort (no valid threshold found)", bootstrap_string, sep = "\n"))
+			
+			theplot = arrangeGrob(obj_plot, km_plot_all, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+		}
+		else
+		{
+			km_plot_threshold = messinaSurvKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Threshold", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
+			km_plot_lower_margin = messinaSurvKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Lower Margin", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
+			km_plot_upper_margin = messinaSurvKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Upper Margin", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
+			
+			theplot = arrangeGrob(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+		}
+		
+		print(theplot)
+	}
+	
+	invisible(NULL)
+}
+
+
+messinaSurvObjPlot = function(object, i)
+{
+	parameters = object@parameters
+	objective_type = parameters@perf_requirement$objective_type
+	objective_min = parameters@perf_requirement$min_objective
+
+	threshold = object@fit@summary$threshold[i]
+	margin = object@fit@summary$margin[i]
+
+	objective_surface = object@fits@objective_surface[[i]]
+	plot_data = data.frame(Objective = objective_surface$objective, Cutoff = objective_surface$cutoff)
+	
+	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
+		geom_line(alpha = 0.5) + 
+		geom_point()
+		
+	if (objective_type == "tau")
+	{
+		theplot = theplot + 
+			coord_cartesian(ylim = c(0, 1)) + 
+			geom_hline(yintercept = c(objective_min, 1-objective_min), lty = "dotted") +
+			geom_hline(yintercept = 0.5, lty = "solid", alpha = 0.5)
+	}
+	else if (objective_type == "coxcoef")
+	{	
+		theplot = theplot + 
+			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
+			geom_hline(yintercept = 0, lty = "solid", alpha = 0.5)
+	}
 
 	if (!is.na(threshold))
 	{
 		theplot = theplot + 
-			geom_hline(yintercept = c(threshold - margin/2, threshold, threshold + margin/2), linetype = c("dashed", "solid", "dashed"), lwd = 0.7)
+			geom_vline(xintercept = threshold, lty = "solid", alpha = 1)
+			
+		if (margin != 0)
+		{
+			theplot = theplot + 
+				geom_vline(xintercept = c(threshold - margin/2, threshold + margin/2), lty = "dashed", alpha = 0.5)
+		}
 	}
 	
 	theplot
 }
+
 
 
 calcKaplanMeierEstimates = function(y, x)
@@ -222,95 +397,6 @@ messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot)
 }
 
 
-messinaSurvObjPlot = function(result, i)
-{
-	fit = result$fits[[i]]
-	parameters = result$parameters
-	plot_data = data.frame(Objective = fit$obj, Cutoff = fit$cutoffs)
-	
-	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
-		geom_line(alpha = 0.5) + 
-		geom_point()
-		
-	if (parameters$perf_requirement$obj_func == "tau")
-	{
-		theplot = theplot + 
-			coord_cartesian(ylim = c(0, 1)) + 
-			geom_hline(yintercept = c(fit$obj_min, 1-fit$obj_min), lty = "dotted") +
-			geom_hline(yintercept = 0.5, lty = "solid", alpha = 0.5)
-	}
-	else if (parameters$perf_requirement$obj_func == "coxcoef")
-	{	
-		theplot = theplot + 
-			geom_hline(yintercept = c(fit$obj_min, -fit$obj_min), lty = "dotted") + 
-			geom_hline(yintercept = 0, lty = "solid", alpha = 0.5)
-	}
-
-	if (!is.na(fit$threshold))
-	{
-		theplot = theplot + 
-			geom_vline(xintercept = fit$threshold, lty = "solid", alpha = 1)
-			
-		if (fit$margin != 0)
-		{
-			theplot = theplot + 
-				geom_vline(xintercept = c(fit$threshold - fit$margin/2, fit$threshold + fit$margin/2), lty = "dashed", alpha = 0.5)
-		}
-	}
-	
-	theplot
-}
-
-
-messinaSurvPlot = function(result, i = NULL, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50))
-{
-	stopifnot(bootstrap_type %in% c("none", "ci", "stdev"))
-	bootstrap_ci = max(bootstrap_ci, 1 - bootstrap_ci)
-	stopifnot(bootstrap_ci > 0.5 && bootstrap_ci < 1)
-	
-	if (is.null(i))
-	{
-		if (!any(result$passed))
-		{
-			stop("Error: Index of feature to plot was not specified (i == NULL), so best passing feature would be selected.  However, no features passed performance criteria.  Please explicitly specify feature to plot by setting 'i' to a feature index in the plot call.")
-		}
-		temp.margin = result$margin
-		temp.margin[!result$passed] = NA
-		i = which.max(temp.margin)
-	}
-
-	parameters = result$parameters
-	x = parameters$x[i,]
-	y = parameters$y
-	fit = result$fits[[i]]
-	feature = ifelse(is.null(parameters$features), sprintf("index %d", i), parameters$features[i])
-	
-	threshold = result$classifier$threshold[i]
-	margin = result$margin[i]
-
-	obj_plot = messinaSurvObjPlot(result, i) + ggtitle("Objective Function")
-	
-	if (bootstrap_type == "ci")			{ bootstrap_string = sprintf("Shaded area: %.0f%% CI", bootstrap_ci*100) }
-	else if (bootstrap_type == "stdev")	{ bootstrap_string = "Shaded area: +/- 1 SD" }
-	else 								{ bootstrap_string = "" }
-	
-	if (is.na(threshold))
-	{
-		km_plot_all = messinaSurvKMplotSingleGroup(y, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("KM of Full Cohort (no valid threshold found)", bootstrap_string, sep = "\n"))
-		
-		theplot = arrangeGrob(obj_plot, km_plot_all, main = sprintf("MessinaSurv Fit: Feature %s", feature))
-	}
-	else
-	{
-		km_plot_threshold = messinaSurvKMplot(y, (x > threshold)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Threshold", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
-		km_plot_lower_margin = messinaSurvKMplot(y, (x > threshold - margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Lower Margin", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
-		km_plot_upper_margin = messinaSurvKMplot(y, (x > threshold + margin/2)*1, bootstrap_type, bootstrap_ci, nboot) + ggtitle(paste("Separation at Upper Margin", bootstrap_string, sep = "\n")) + theme(legend.position = "bottom")
-		
-		theplot = arrangeGrob(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
-	}
-	
-	theplot
-}
 
 
 #' Plot the results of a Messina fit.
