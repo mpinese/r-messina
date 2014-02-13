@@ -224,7 +224,10 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	mean_obj = rowMeans(temp)
 	obj_passes = mean_obj >= obj_min
 	
-	# Train MessinaSurv on just those rows of x that passed.
+	# Train MessinaSurv on all rows of x (commented original was only on 
+	# passing rows, but it's proven useful to have all fit trajectories
+	# for diagnostics, and it adds little extra compute time above and
+	# beyond the LOOCV).
 	cat("Final training...\n")
 #	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
 	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes | TRUE, parallel = parallel)
@@ -233,27 +236,29 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 
 	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1
 	margins = sapply(fits, function(f) ifelse(is.null(f), NA, f$margin))
 	
-    result = list(  problem = "survival",
-                    parameters = list(  x = x, 
-                                        y = y, 
-                                        features = features, 
-                                        perf_requirement = list(obj_func = obj_func, obj_min = obj_min),
-                                        f_train = f_train, 
-                                        n_boot = n_boot, 
-                                        seed = seed),
-                    classifier = list(  type = as.factor(ifelse(obj_passes, "Threshold", NA)), 
-                                        threshold = thresholds, 
-                                        ptrue = rep(NA, nrow(x)),
-                                        posk = posks), 
-					fits = fits,
-                    margin = margins, 
-                    psuccessful = rowMeans(!is.na(boot_objs)),
-                    passed = obj_passes,
-                    perf = list(mean = mean_obj, var = NA),
-                    bootstraps = boot_objs)
-    class(result) = "MessinaResult"
+	parameters = .MessinaParameters(x = x,
+									y = y,
+									perf_requirement = list(objective_type = obj_func,
+															min_objective = obj_min),
+									training_fraction = f_train,
+									num_bootstraps = n_boot,
+									prng_seed = seed)
+	
+	objective_surfaces = llply(fits, function(fit) data.frame(cutoff = fit$cutoffs, objective = fit$obj))
+	
+	fits2 = .MessinaFits(summary = data.frame(	passed = obj_passes,
+												type = as.factor(ifelse(obj_passes, "Threshold", NA)),
+												threshold = thresholds,
+												posk = posks,
+												margin = margins,
+												ptrue = rep(NA, nrow(x)),
+												psuccessful = rowMeans(!is.na(boot_objs))),
+						objective_surfaces = objective_surfaces)
+	
+	result = .MessinaResult(problem_type = "survival",
+							parameters = parameters,
+							perf_estimates = data.frame(mean_obj = mean_obj),
+							fits = fits2)
 	
 	return(result)
 }
-
-
