@@ -127,24 +127,40 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	specifications_passed = classifier_sens_mean >= min_sens & classifier_spec_mean >= min_spec & classifier_type == "Threshold"
 	classifier_perf_mean = cbind(classifier_perf_mean, Sensitivity = classifier_sens_mean, Specificity = classifier_spec_mean)
 	
-	result2 = list(	problem = "classification",
-					parameters = list(	x = x, 
-										y = y, 
-										features = features, 
-										perf_requirement = list(min_sens = min_sens, min_spec = min_spec),
-										f_train = f_train, 
-										n_boot = n_boot, 
-										seed = seed),
-					classifier = list(	type = classifier_type, 
-										threshold = classifier_threshold, 
-										ptrue = classifier_ptrue, 
-										posk = classifier_posk), 
-					margin = classifier_margin, 
-					psuccessful = classifier_psuccessful, 
-					passed = specifications_passed,
-					perf = list(mean = classifier_perf_mean, var = classifier_perf_var),
-					bootstraps = NA)
-	class(result2) = "MessinaResult"
+	params = .MessinaParameters(	x = x,
+									y = y,
+									perf_requirement = list(min_sensitivity = min_sens,
+															min_specificity = min_spec),
+									training_fraction = f_train,
+									num_bootstraps = n_boot,
+									prng_seed = seed)
+	
+	perf_estimates = data.frame(mean_tpr = classifier_perf_mean[,"TPR"],
+								mean_fpr = classifier_perf_mean[,"FPR"],
+								mean_tnr = classifier_perf_mean[,"TNR"],
+								mean_fnr = classifier_perf_mean[,"FNR"],
+								var_tpr = classifier_perf_var[,"TPR"],
+								var_fpr = classifier_perf_var[,"FPR"],
+								var_tnr = classifier_perf_var[,"TNR"],
+								var_fnr = classifier_perf_var[,"FNR"],
+								mean_sens = classifier_sens_mean,
+								mean_spec = classifier_spec_mean)
+	
+	fit_summary = data.frame(	passed = specifications_passed,
+								type = classifier_type,
+								threshold = classifier_threshold,
+								posk = classifier_posk,
+								margin = classifier_margin,
+								ptrue = classifier_ptrue,
+								psuccessful = classifier_psuccessful)
+	
+	fits = .MessinaFits(summary = fit_summary, objective_surfaces = NULL)
+	
+	result2 = .MessinaResult(	problem_type = "classification",
+								parameters = params,
+								perf_estimates = perf_estimates,
+								fits = fits)
+	
 	
 	return(result2)
 }

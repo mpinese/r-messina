@@ -18,5 +18,8 @@ LinkingTo: Rcpp
 Collate:
     'messina-package.R'
     'messina.R'
-    'messinaResult-class.R'
     'messinaSurv.R'
+	'AllClasses.R'
+	'plot-methods.R'
+	'show-methods.R'
+	
