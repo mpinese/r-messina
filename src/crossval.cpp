@@ -3,7 +3,7 @@
  * described by Nadeau & Bengio 2003.  Functions are wrapped
  * up in a namespace.
  *
- * Copyright 2013 Mark Pinese
+ * Copyright 2014 Mark Pinese
  *
  * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
  * 20130603 Changed licence from CPL 1.0 to EPL 1.0.
  *          Changed selectTestSet to use the internal R PRNG. 
  *          Changed asserts to Rcpp stops.
+ * 20140131	Added progress bar code.
  */
 
 #include <Rcpp.h>

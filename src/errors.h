@@ -1,7 +1,7 @@
 /* errors.h
  * Error codes and messages.
  *
- * Copyright 2013 Mark Pinese
+ * Copyright 2014 Mark Pinese
  *
  * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
