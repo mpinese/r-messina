@@ -1,4 +1,118 @@
 
+#' Run the MessinaSurv algorithm to find features (eg. genes) that can define groups
+#' of patients with very different survival times.
+#'
+#' TODO
+#' 
+#' @param x feature expression values, either supplied as an ExpressionSet, or as
+#'   an object that can be converted to a matrix by as.matrix.  In the latter case,
+#'   features should be in rows and samples in columns, with feature names taken
+#'   from the rows of the object.
+#' @param y a Surv object containing survival times and censoring status for each
+#    sample in x.
+#' @param obj_min the minimum acceptable sensitivity that a classifier separating
+#'   the two groups of y must achieve.
+#' @param obj_func the minimum acceptable specificity that a classifier separating
+#'   the two groups of y must achieve.
+#' @param f_train the fraction of samples to be used in the training splits of the
+#'   bootstrap rounds.
+#' @param n_boot the number of bootstrap rounds to use.
+#' @param seed an optional random seed for the analysis.  If NULL, the R PRNG us used
+#'   as-is.
+#' @return an object of class "MessinaResult" containing the results of the analysis.
+#' @export
+#' @seealso \code{\link{MessinaResult-class}}
+#' @seealso \code{\link{ExpressionSet}}
+#' @references TODO
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1))
+{
+	stopifnot(class(y) == "Surv")
+
+	if (class(x) == "ExpressionSet")
+	{
+		features = featureNames(x)
+		samples = sampleNames(x)
+		x = exprs(x)
+	}
+	else
+	{
+		x = as.matrix(x)
+		features = rownames(x)
+		samples = colnames(x)
+		
+		if (is.null(features))	{ features = paste("F", 1:nrow(x), sep = "") }
+		if (is.null(samples))	{ samples = paste("S", 1:ncol(x), sep = "") }
+	}
+	
+	n_boot = as.integer(n_boot)
+	seed = as.integer(seed)
+
+	if (length(seed) != 0)
+	{
+		set.seed(seed)
+	}
+
+	n_test = ceiling((1 - f_train) * nrow(y))
+
+	cat("Performance bootstrapping...\n")
+	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, min_group_frac, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = "time")
+
+	rownames(boot_objs) = rownames(x)
+	colnames(boot_objs) <- NULL
+	
+	# If fitting failed, set performance to the no-information value
+	temp = boot_objs
+	temp[is.na(temp)] = c("tau" = 0.5, "reltau" = 0.5, "coxcoef" = 0)[obj_func]
+	
+	# Find the rows of x (if any) that passed the performance criterion on
+	# the CV results.
+	mean_obj = rowMeans(temp)
+	obj_passes = mean_obj >= obj_min
+	
+	# Train MessinaSurv on all rows of x (commented original was only on 
+	# passing rows, but it's proven useful to have all fit trajectories
+	# for diagnostics, and it adds little extra compute time above and
+	# beyond the LOOCV).
+	cat("Final training...\n")
+#	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes, parallel = parallel)
+	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes | TRUE, parallel = parallel)
+	
+	thresholds = sapply(fits, function(f) ifelse(is.null(f), NA, f$threshold))
+	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1
+	margins = sapply(fits, function(f) ifelse(is.null(f), NA, f$margin))
+	
+	parameters = .MessinaParameters(x = x,
+									y = y,
+									features = features,
+									samples = samples,
+									perf_requirement = list(objective_type = obj_func,
+															min_objective = obj_min),
+									minimum_group_fraction = min_group_frac,
+									training_fraction = f_train,
+									num_bootstraps = n_boot,
+									prng_seed = seed)
+	
+	objective_surfaces = llply(fits, function(fit) data.frame(cutoff = fit$cutoffs, objective = fit$obj))
+	
+	fits2 = .MessinaFits(summary = data.frame(	passed = obj_passes,
+												type = as.factor(ifelse(obj_passes, "Threshold", NA)),
+												threshold = thresholds,
+												posk = posks,
+												margin = margins,
+												ptrue = rep(NA, nrow(x)),
+												psuccessful = rowMeans(!is.na(boot_objs))),
+						objective_surfaces = objective_surfaces)
+	
+	result = .MessinaSurvResult(problem_type = "survival",
+								parameters = parameters,
+								perf_estimates = data.frame(mean_obj = mean_obj),
+								fits = fits2)
+	
+	return(result)
+}
+
+
 messinaSurvObjectiveFunc = function(x, y, func)
 {
 	if (func == "tau")
@@ -12,6 +126,15 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		tau = (agree+tied/2)/(agree+disagree+tied)
 
 		return(tau)
+	}
+	else if (func == "reltau")
+	{
+		counts = survival:::survConcordance.fit(y, x)
+		agree = counts["concordant"]
+		disagree = counts["discordant"]
+		reltau = agree/(agree+disagree)
+
+		return(reltau)
 	}
 	else if (func == "coxcoef")
 	{
@@ -28,7 +151,12 @@ messinaSurvObjectiveFunc = function(x, y, func)
 
 messinaSurvDoesObjectivePass = function(cutoff_obj, obj_min, obj_func)
 {
-	if (obj_func == "tau")
+	if (length(cutoff_obj) == 0)
+	{
+		return(list(pos = logical(0), neg = logical(0)))
+	}
+
+	if (obj_func == "tau" || obj_func == "reltau")
 	{
 		cutoff_obj_good_positive = (cutoff_obj >= obj_min) & (!is.na(cutoff_obj))
 		cutoff_obj_good_negative = ((1-cutoff_obj) >= obj_min) & (!is.na(cutoff_obj))
@@ -65,21 +193,27 @@ messinaSurvFindBestThreshold = function(x, f)
 }
 
 
-messinaSurvTrain = function(x1, y, obj_min, obj_func = "tau")
+messinaSurvTrain = function(x1, y, min_group_frac, obj_min, obj_func)
 {
 	# Measure the concordance (resubstituted) on all cutoffs
 	# possible in the training set.
 	x_sorted = rle(sort(x1))$values
-	x_cutoffs = (x_sorted[-1] + x_sorted[-length(x_sorted)])/2
+	if (length(x_sorted) == 1)	{ x_cutoffs = x_sorted } else { x_cutoffs = (x_sorted[-1] + x_sorted[-length(x_sorted)])/2 }
+	x_cutoffs = c(-Inf, x_cutoffs, Inf)
+	x_cutoffs = x_cutoffs[!duplicated(x_cutoffs)]
 	cutoff_obj = sapply(x_cutoffs, function(cutoff) messinaSurvObjectiveFunc((x1 > cutoff)*1, y, obj_func))
 	
 	# Find the widest region with a concordance index at least
 	# as good as min_gamma.  Need to do this twice, to account for
 	# CIs < 0.5, which could be good if the direction of the
 	# classifier were reversed.
+	cutoff_frac = sapply(x_cutoffs, function(cutoff) mean(x1 > cutoff))
+	cutoff_frac = pmin(cutoff_frac, 1 - cutoff_frac)
+	cutoff_frac_good = cutoff_frac >= min_group_frac
+
 	cutoff_obj_good = messinaSurvDoesObjectivePass(cutoff_obj, obj_min, obj_func)
-	cutoff_obj_good_positive = cutoff_obj_good$pos
-	cutoff_obj_good_negative = cutoff_obj_good$neg
+	cutoff_obj_good_positive = cutoff_obj_good$pos & cutoff_frac_good
+	cutoff_obj_good_negative = cutoff_obj_good$neg & cutoff_frac_good
 	
 	# Find the best threshold and direction
 	best_pos = messinaSurvFindBestThreshold(x_sorted, cutoff_obj_good_positive)
@@ -102,12 +236,12 @@ messinaSurvTrain = function(x1, y, obj_min, obj_func = "tau")
 		best_direction = NA
 	}
 	
-	result = list(threshold = best_threshold, margin = best_margin, direction = best_direction, cutoffs = x_cutoffs, obj = cutoff_obj, obj_func = obj_func, obj_min = obj_min)
+	result = list(threshold = best_threshold, margin = best_margin, direction = best_direction, cutoffs = x_cutoffs, obj = cutoff_obj, min_group_frac = min_group_frac, obj_func = obj_func, obj_min = obj_min)
 	return(result)
 }
 
 
-messinaSurvSingleXDraw = function(x1, y, obj_min, obj_func, n_test)
+messinaSurvSingleXDraw = function(x1, y, min_group_frac, obj_min, obj_func, n_test)
 {
 	# TODO: Make sure there are enough events in the test set to be useful
 	test_indices = sample.int(length(x1), n_test)
@@ -118,7 +252,7 @@ messinaSurvSingleXDraw = function(x1, y, obj_min, obj_func, n_test)
 	y_train = y[train_indices,]
 
 	# Train a MessinaSurv classifier on the training set
-	fit = messinaSurvTrain(x_train, y_train, obj_min, obj_func)
+	fit = messinaSurvTrain(x_train, y_train, min_group_frac, obj_min, obj_func)
 	
 	# Assess the classifier on the test set
 	if (is.na(fit$threshold))
@@ -134,21 +268,21 @@ messinaSurvSingleXDraw = function(x1, y, obj_min, obj_func, n_test)
 }
 
 
-messinaSurvSingleX = function(x1, y, obj_min, obj_func, n_boot, n_test)
+messinaSurvSingleX = function(x1, y, min_group_frac, obj_min, obj_func, n_boot, n_test)
 {
-	results = replicate(n_boot, messinaSurvSingleXDraw(x1, y, obj_min, obj_func, n_test))
+	results = replicate(n_boot, messinaSurvSingleXDraw(x1, y, min_group_frac, obj_min, obj_func, n_test))
 	return(as.vector(results))
 }
 
 
-messinaSurvTrainOnSubset = function(x, y, obj_min, obj_func, subset, parallel)
+messinaSurvTrainOnSubset = function(x, y, min_group_frac, obj_min, obj_func, subset, parallel)
 {
 	fits = llply(1:nrow(x), 
 		function(xi) 
 		{ 
 			if (subset[xi])
 			{
-				fit = messinaSurvTrain(x[xi,], y, obj_min, obj_func)
+				fit = messinaSurvTrain(x[xi,], y, min_group_frac, obj_min, obj_func)
 				return(fit)
 			}
 			else
@@ -160,105 +294,3 @@ messinaSurvTrainOnSubset = function(x, y, obj_min, obj_func, subset, parallel)
 	return(fits)
 }
 
-
-#' Run the MessinaSurv algorithm to find features (eg. genes) that can define groups
-#' of patients with very different survival times.
-#'
-#' TODO
-#' 
-#' @param x feature expression values, either supplied as an ExpressionSet, or as
-#'   an object that can be converted to a matrix by as.matrix.  In the latter case,
-#'   features should be in rows and samples in columns, with feature names taken
-#'   from the rows of the object.
-#' @param y a Surv object containing survival times and censoring status for each
-#    sample in x.
-#' @param obj_min the minimum acceptable sensitivity that a classifier separating
-#'   the two groups of y must achieve.
-#' @param obj_func the minimum acceptable specificity that a classifier separating
-#'   the two groups of y must achieve.
-#' @param f_train the fraction of samples to be used in the training splits of the
-#'   bootstrap rounds.
-#' @param n_boot the number of bootstrap rounds to use.
-#' @param seed an optional random seed for the analysis.  If NULL, the R PRNG us used
-#'   as-is.
-#' @return an object of class "MessinaResult" containing the results of the analysis.
-#' @export
-#' @seealso \code{\link{MessinaResult-class}}
-#' @seealso \code{\link{ExpressionSet}}
-#' @references TODO
-#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
-messinaSurv = function(x, y, obj_min, obj_func = "tau", f_train = 0.8, n_boot = 50, seed = NULL, parallel = FALSE)
-{
-	stopifnot(class(y) == "Surv")
-
-	if (class(x) == "ExpressionSet")
-	{
-		features = featureNames(x)
-		x = exprs(x)
-	}
-	else
-	{
-		x = as.matrix(x)
-		features = rownames(x)
-	}
-
-	if (!is.null(seed))
-	{
-		set.seed(seed)
-	}
-
-	n_test = ceiling((1 - f_train) * nrow(y))
-
-	cat("Performance bootstrapping...\n")
-	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = "time")
-
-	rownames(boot_objs) = rownames(x)
-	colnames(boot_objs) <- NULL
-	
-	# If fitting failed, set performance to the no-information value
-	temp = boot_objs
-	temp[is.na(temp)] = c("tau" = 0.5, "coxcoef" = 0)[obj_func]
-	
-	# Find the rows of x (if any) that passed the performance criterion on
-	# the CV results.
-	mean_obj = rowMeans(temp)
-	obj_passes = mean_obj >= obj_min
-	
-	# Train MessinaSurv on all rows of x (commented original was only on 
-	# passing rows, but it's proven useful to have all fit trajectories
-	# for diagnostics, and it adds little extra compute time above and
-	# beyond the LOOCV).
-	cat("Final training...\n")
-#	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes, parallel = parallel)
-	fits = messinaSurvTrainOnSubset(x, y, obj_min, obj_func, obj_passes | TRUE, parallel = parallel)
-	
-	thresholds = sapply(fits, function(f) ifelse(is.null(f), NA, f$threshold))
-	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1
-	margins = sapply(fits, function(f) ifelse(is.null(f), NA, f$margin))
-	
-	parameters = .MessinaParameters(x = x,
-									y = y,
-									perf_requirement = list(objective_type = obj_func,
-															min_objective = obj_min),
-									training_fraction = f_train,
-									num_bootstraps = n_boot,
-									prng_seed = seed)
-	
-	objective_surfaces = llply(fits, function(fit) data.frame(cutoff = fit$cutoffs, objective = fit$obj))
-	
-	fits2 = .MessinaFits(summary = data.frame(	passed = obj_passes,
-												type = as.factor(ifelse(obj_passes, "Threshold", NA)),
-												threshold = thresholds,
-												posk = posks,
-												margin = margins,
-												ptrue = rep(NA, nrow(x)),
-												psuccessful = rowMeans(!is.na(boot_objs))),
-						objective_surfaces = objective_surfaces)
-	
-	result = .MessinaResult(problem_type = "survival",
-							parameters = parameters,
-							perf_estimates = data.frame(mean_obj = mean_obj),
-							fits = fits2)
-	
-	return(result)
-}

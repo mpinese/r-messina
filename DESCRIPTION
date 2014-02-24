@@ -13,7 +13,8 @@ Depends:
     survival (>= 2.37-4),
 	plyr (>= 1.8),
     ggplot2 (>= 0.9.3.1),
-	gridExtra (>= 0.9.1)
+	gridExtra (>= 0.9.1),
+	methods
 LinkingTo: Rcpp
 Collate:
     'messina-package.R'

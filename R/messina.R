@@ -35,13 +35,21 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (class(x) == "ExpressionSet")
 	{
 		features = featureNames(x)
+		samples = sampleNames(x)
 		x = exprs(x)
 	}
 	else
 	{
 		x = as.matrix(x)
 		features = rownames(x)
+		samples = colnames(x)
+		
+		if (is.null(features))	{ features = paste("F", 1:nrow(x), sep = "") }
+		if (is.null(samples))	{ samples = paste("S", 1:ncol(x), sep = "") }
 	}
+	
+	n_boot = as.integer(n_boot)
+	seed = as.integer(seed)
 
 	# Calculate the number of training samples in each round.
 	n_train = round(ncol(x) * f_train)
@@ -77,12 +85,15 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	# Keep note of the transformation parameters so it can be reversed.
 	xmin = apply(x, 1, min)
 	xmax = apply(x, 1, max)
-	xtrans = floor((x - xmin) / (xmax - xmin) * 65535)
+	xdelta2 = xmax - xmin
+	xdelta = xdelta2
+	xdelta[xdelta == 0] = 1
+	xtrans = floor((x - xmin) / xdelta * 65535)
 	xtrans[xtrans == 65536] = 65535		# Just in case of rounding errors.
 	stopifnot(all(xtrans <= 65535) & all(xtrans >= 0))
 	
 	# Get a random seed if one wasn't supplied
-	if (is.null(seed))	seed = runif(1, 1, 2^32 - 1)
+	if (length(seed) == 0)	seed = as.integer(runif(1, 1, 2^32 - 1))
 	
 	# Call the external C functions for the actual calculation.
 	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed)
@@ -105,15 +116,18 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	#	2	ZERO_R		A marginal random classifier that returns class true if runif(1) < ptrue.
 	#	3	ONE_CLASS	A deterministic single-class classifier that returns class posk.
 	stopifnot(all(result$d1[,1] != 0))
-	
+
 	classifier_type = as.factor(c("Threshold", "Random", "OneClass")[result$d1[,1]])
-	classifier_threshold = result$d1[,2] * (xmax - xmin) / 65535 + xmin
-	classifier_margin = result$d1[,3] * (xmax - xmin) / 65535
+	classifier_type[xdelta2 == 0] = "Random"
+	classifier_threshold = result$d1[,2] * xdelta / 65535 + xmin
+	classifier_margin = result$d1[,3] * xdelta / 65535
 	classifier_threshold[classifier_type != "Threshold"] = NA
 	classifier_margin[classifier_type != "Threshold"] = NA
 	classifier_ptrue = result$d2[,1]
+	classifier_ptrue[xdelta2 == 0] = mean(y)
 	classifier_ptrue[classifier_type != "Random"] = NA
 	classifier_psuccessful = result$d2[,2]
+	classifier_psuccessful[xdelta2 == 0] = 0
 	classifier_perf_mean = result$d2[,3:6]
 	classifier_perf_var = result$d2[,7:10]
 	classifier_posk = result$d3
@@ -129,8 +143,11 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	
 	params = .MessinaParameters(	x = x,
 									y = y,
+									features = features,
+									samples = samples,
 									perf_requirement = list(min_sensitivity = min_sens,
 															min_specificity = min_spec),
+									minimum_group_fraction = 0,
 									training_fraction = f_train,
 									num_bootstraps = n_boot,
 									prng_seed = seed)
@@ -154,12 +171,12 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 								ptrue = classifier_ptrue,
 								psuccessful = classifier_psuccessful)
 	
-	fits = .MessinaFits(summary = fit_summary, objective_surfaces = NULL)
+	fits = .MessinaFits(summary = fit_summary, objective_surfaces = list())
 	
-	result2 = .MessinaResult(	problem_type = "classification",
-								parameters = params,
-								perf_estimates = perf_estimates,
-								fits = fits)
+	result2 = .MessinaClassResult(	problem_type = "classification",
+									parameters = params,
+									perf_estimates = perf_estimates,
+									fits = fits)
 	
 	
 	return(result2)

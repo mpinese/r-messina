@@ -5,7 +5,10 @@ setClassUnion("MessinaY", c("Surv", "vector"))
 .MessinaParameters <- setClass(	"MessinaParameters",
 								slots = c(	x = "matrix",
 											y = "MessinaY",
+											features = "vector",
+											samples = "vector",
 											perf_requirement = "list",		# For MessinaSurvResult, list with names objective_type, min_objective.  For MessinaClassResult, list with names min_sensitivity, min_specificity
+											minimum_group_fraction = "numeric",
 											training_fraction = "numeric",
 											num_bootstraps = "integer",
 											prng_seed = "integer"))

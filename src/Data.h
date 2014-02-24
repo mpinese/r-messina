@@ -2,7 +2,7 @@
  * A class to store transcriptional data, as well as class membership
  * for all samples in an experiment.  Also handles data IO.
  *
- * Copyright 2013 Mark Pinese
+ * Copyright 2014 Mark Pinese
  *
  * Licensed under the Eclipse Public License 1.0 (the "License");
  * you may not use this file except in compliance with the License.
