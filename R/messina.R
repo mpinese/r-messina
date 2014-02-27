@@ -57,29 +57,29 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	
 	# Basic error checking.
 	target_AUC = (min_spec + min_sens) / 2
-	if (!is.logical(y))					stop("Error: Class membership indicator y must be a vector of logical (TRUE / FALSE) values.")
-	if (any(is.na(x)))					stop("Error: Missing values in x.  Messina cannot handle missing data at this time.")
-	if (any(is.na(y)))					stop("Error: Missing values in y.  Messina cannot handle missing class membership information.")
-	if (!is.numeric(min_sens))			stop(sprintf("Error: Invalid value for minimum acceptable sensitivity min_sens: %s", str(min_sens)))
-	if (!is.numeric(min_spec))			stop(sprintf("Error: Invalid value for minimum acceptable specificity min_spec: %s", str(min_spec)))
-	if (!is.numeric(f_train))			stop(sprintf("Error: Invalid value for training sample fraction f_train: %s", str(f_train)))
-	if (!is.numeric(n_boot))			stop(sprintf("Error: Invalid value for number of bootstrap iterations n_boot: %s", str(n_boot)))
-	if (ncol(x) < 3)					stop(sprintf("Error: Too few samples (%d).  Messina requires at least 3 samples.", ncol(x)))
-	if (sum(y) == 0 || sum(!y) == 0)	stop(sprintf("Error: All samples are of the same class.  Messina requires samples in each class to operate."))
-	if (ncol(x) != length(y))			stop(sprintf("Error: Inconsistent input data sizes.  Number of columns of data x (%d) does not equal length of class labels y (%d).", ncol(x), length(y)))
-	if (min_sens <= 0 || min_sens > 1)	stop(sprintf("Error: Invalid value for minimum acceptable sensitivity parameter (%.3f).  Minimum acceptable sensitivity must be in (0, 1].", min_sens))
-	if (min_spec <= 0 || min_spec > 1)	stop(sprintf("Error: Invalid value for minimum acceptable specificity parameter (%.3f).  Minimum acceptable specificity must be in (0, 1].", min_spec))
-	if (f_train <= 0 || f_train >= 1)	stop(sprintf("Error: Invalid value for training sample fraction f_train (%.3f).  Training sample fraction must be in (0, 1), and preferably >= 0.5.", f_train))
-	if (n_boot <= 0)					stop(sprintf("Error: Invalid value for number of bootstrap iterations (%d).  Number of bootstrap iterations must be >= 1 (and preferably >= 50).", f_train))
-	if (target_AUC <= 0.5)				stop(sprintf("Error: Senseless parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a target classifier AUC <= 0.5; all genes will satisfy these constraints.  Increase parameter values to make the classifiers more stringent.", min_sens, min_spec))
+	if (!is.logical(y))					stop("Class membership indicator y must be a vector of logical (TRUE / FALSE) values.")
+	if (any(is.na(x)))					stop("Missing values in x.  Messina cannot handle missing data at this time.")
+	if (any(is.na(y)))					stop("Missing values in y.  Messina cannot handle missing class membership information.")
+	if (!is.numeric(min_sens))			stop(sprintf("Invalid value for minimum acceptable sensitivity min_sens: %s", str(min_sens)))
+	if (!is.numeric(min_spec))			stop(sprintf("Invalid value for minimum acceptable specificity min_spec: %s", str(min_spec)))
+	if (!is.numeric(f_train))			stop(sprintf("Invalid value for training sample fraction f_train: %s", str(f_train)))
+	if (!is.numeric(n_boot))			stop(sprintf("Invalid value for number of bootstrap iterations n_boot: %s", str(n_boot)))
+	if (ncol(x) < 3)					stop(sprintf("Too few samples (%d).  Messina requires at least 3 samples.", ncol(x)))
+	if (sum(y) == 0 || sum(!y) == 0)	stop(sprintf("All samples are of the same class.  Messina requires samples in each class to operate."))
+	if (ncol(x) != length(y))			stop(sprintf("Inconsistent input data sizes.  Number of columns of data x (%d) does not equal length of class labels y (%d).", ncol(x), length(y)))
+	if (min_sens <= 0 || min_sens > 1)	stop(sprintf("Invalid value for minimum acceptable sensitivity parameter (%.3f).  Minimum acceptable sensitivity must be in (0, 1].", min_sens))
+	if (min_spec <= 0 || min_spec > 1)	stop(sprintf("Invalid value for minimum acceptable specificity parameter (%.3f).  Minimum acceptable specificity must be in (0, 1].", min_spec))
+	if (f_train <= 0 || f_train >= 1)	stop(sprintf("Invalid value for training sample fraction f_train (%.3f).  Training sample fraction must be in (0, 1), and preferably >= 0.5.", f_train))
+	if (n_boot <= 0)					stop(sprintf("Invalid value for number of bootstrap iterations (%d).  Number of bootstrap iterations must be >= 1 (and preferably >= 50).", f_train))
+	if (target_AUC <= 0.5)				stop(sprintf("Senseless parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a target classifier AUC <= 0.5; all genes will satisfy these constraints.  Increase parameter values to make the classifiers more stringent.", min_sens, min_spec))
 
 	# Sanity checks
-	if (sum(y) < 5)						warning(sprintf("Warning: Low number of samples in positive class (%d).  Messina's performance may be unreliable for fewer than 5 samples per class.", sum(y)))
-	if (sum(!y) < 5)					warning(sprintf("Warning: Low number of samples in negative class (%d).  Messina's performance may be unreliable for fewer than 5 samples per class.", sum(!y)))
-	if (target_AUC < 0.7)				warning(sprintf("Warning: Very low stringency parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a low target classifier AUC (AUC = %.3f); with these settings Messina's stringency will be particularly low.  Continuing anyway, but consider increasing parameter values to make the classifiers more stringent.", min_sens, min_spec, target_AUC))
-	if (target_AUC >= 0.9)				warning(sprintf("Warning: Very high stringency parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a high target classifier AUC (AUC = %.3f); with these settings Messina's stringency will be particularly high.  Continuing anyway, but consider using a conventional T-test or similar, which in this case may be more powerful than Messina.", min_sens, min_spec, target_AUC))
-	if (f_train < 0.5)					warning(sprintf("Warning: Low training fraction f_train (%.3f).  Are you absolutely sure you want it this low?  Continuing anyway, but consider increasing f_train to >= 0.5 (recommended value is 0.9).", f_train))
-	if (n_boot < 50)					warning(sprintf("Warning: Low number of bootstrap iterations n_boot (%d).  Are you absolutely sure you want it this low?  Continuing anyway, but consider increasing n_boot to >= 50 (recommended value is 50, more is better).", n_boot))
+	if (sum(y) < 5)						warning(sprintf("Low number of samples in positive class (%d).  Messina's performance may be unreliable for fewer than 5 samples per class.", sum(y)))
+	if (sum(!y) < 5)					warning(sprintf("Low number of samples in negative class (%d).  Messina's performance may be unreliable for fewer than 5 samples per class.", sum(!y)))
+	if (target_AUC < 0.7)				warning(sprintf("Very low stringency parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a low target classifier AUC (AUC = %.3f); with these settings Messina's stringency will be particularly low.  Continuing anyway, but consider increasing parameter values to make the classifiers more stringent.", min_sens, min_spec, target_AUC))
+	if (target_AUC >= 0.9)				warning(sprintf("Very high stringency parameters.  Supplied parameters (min_sens = %.3f, min_spec = %.3f) imply a high target classifier AUC (AUC = %.3f); with these settings Messina's stringency will be particularly high.  Continuing anyway, but consider using a conventional T-test or similar, which in this case may be more powerful than Messina.", min_sens, min_spec, target_AUC))
+	if (f_train < 0.5)					warning(sprintf("Low training fraction f_train (%.3f).  Are you absolutely sure you want it this low?  Continuing anyway, but consider increasing f_train to >= 0.5 (recommended value is 0.9).", f_train))
+	if (n_boot < 50)					warning(sprintf("Low number of bootstrap iterations n_boot (%d).  Are you absolutely sure you want it this low?  Continuing anyway, but consider increasing n_boot to >= 50 (recommended value is 50, more is better).", n_boot))
 	
 	# Transform x so that each gene (in rows) is bounded in [0, 65535].
 	# Keep note of the transformation parameters so it can be reversed.
@@ -101,7 +101,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (typeof(result) == "character")
 	{
 		# messina encountered an error, which is returned here as a string.
-		stop(sprintf("Error: Internal error encountered in messina C++ code.  Error description from C++ code: \"%s\".", result))
+		stop(sprintf("Internal error encountered in messina C++ code.  Error description from C++ code: \"%s\".", result))
 	}
 	
 	# Result is a list:
