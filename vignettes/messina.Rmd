@@ -1,5 +1,5 @@
 <!--
-%\VignetteEngine{knitr::knitr}
+%\VignetteEngine{knitr::docco_linear}
 %\VignetteIndexEntry{Using Messina}
 %\VignetteDepends{leukemiasEset}
 %\VignetteDepends{Biobase}
@@ -41,18 +41,18 @@ library(leukemiasEset)
 data(leukemiasEset)
 ```
 
-We will compare CML samples to healthy bone marrow samples.  We start by extracting
-the expression and sample type data, and subsetting to just CML and NoL (normal bone
+We will compare ALL samples to healthy bone marrow samples.  We start by extracting
+the expression and sample type data, and subsetting to just ALL and NoL (normal bone
 marrow) samples:
 ```{r class_prepare_data}
 sample_type = pData(leukemiasEset)$LeukemiaType
 expression_matrix = exprs(leukemiasEset)
-normal_or_cml = sample_type %in% c("NoL", "CML")
-sample_type = sample_type[normal_or_cml]
-expression_matrix = expression_matrix[,normal_or_cml]
+normal_or_all = sample_type %in% c("NoL", "ALL")
+sample_type = sample_type[normal_or_all]
+expression_matrix = expression_matrix[,normal_or_all]
 ```
 
-The expression matrix and sample type vectors now contain only data for CML or normal
+The expression matrix and sample type vectors now contain only data for ALL or normal
 bone marrow samples.
 ```{r class_show_data}
 dim(expression_matrix)
@@ -65,42 +65,59 @@ in very large datasets this may be useful to reduce runtimes.  Simulation studie
 indicated that Messina's false-discovery rate is acceptably low (< 10%) under most conditions,
 so filtering is not necessary for FDR control `r citep("10.1371/journal.pone.0005337")`.
 
-We now create a binary variable indicating whether a given sample is CML or not, then run
+We now create a binary variable indicating whether a given sample is ALL or not, then run
 Messina.  We start with stringent parameters (minimum sensitivity and specificity both 95%)
 to yield classifiers with high performance, but possibly reduced robustness to noise.  Note
 that Messina works best with more relaxed parameters than these; and in this case the
 function warns that the user is probably better off using a classical statistical test.
 
 ```{r class_fit_1}
-sample_is_cml = sample_type == "CML"
+sample_is_all = sample_type == "ALL"
 
-messina_fit_1 = messina(expression_matrix, sample_is_cml, min_sens = 0.95, min_spec = 0.95, seed = 1234)
+messina_fit_1 = messina(expression_matrix, sample_is_all, min_sens = 0.95, min_spec = 0.95, seed = 1234)
+```
+
+The result of the messina call is a MessinaClassResult object, and we can see some summary
+information about the run just by printing the variable:
+
+```{r class_display_1}
 messina_fit_1
 ```
 
 To see the top hits of the algorithm, we use the plot function, specifying that we wish the
 two best features (by margin size) to be displayed:
 
-```{r class_plot_1}
+```{r class_plot_1_point}
 plot(messina_fit_1, i = 1:2)
 ```
 
-Messina's strength is that it can be tuned to find more noise-robust classifiers, by relaxing its performance
-requirements.  If we are willing to accept a reduced specificity in CML diagnosis (ie. some
-normal samples will be called as CML), in return for robustness to assay variations, we
+In each of these plots, samples are in rows, with each sample's expression and class 
+represented by the location and colour of the sample's point, respectively.  The
+optimal classifier threshold value is shown by a solid line, and the classifier margin
+by dotted lines.
+
+Messina has an alternative plotting mode that some users may find more natural:
+
+```{r class_plot_1_bar}
+plot(messina_fit_1, i = 1, plot_type = "bar")
+```
+
+Messina's strength is that it can be tuned to find more noise-robust classifiers, by relaxing 
+its performance requirements.  If we are willing to accept a reduced specificity in ALL diagnosis 
+(ie. some normal samples will be called as ALL), in return for robustness to assay variations, we
 can run Messina with altered parameters:
 
 ```{r class_fit_2}
-messina_fit_2 = messina(expression_matrix, sample_is_cml, min_sens = 0.95, min_spec = 0.6, seed = 1234)
+messina_fit_2 = messina(expression_matrix, sample_is_all, min_sens = 0.95, min_spec = 0.6, seed = 1234)
 messina_fit_2
 ```
 
 The classifiers now found by Messina have wider margins, and therefore are more robust to
 noise and experimental or technical variations, but as a trade-off are more likely to report
-false positives when detecting CML.
+false positives when detecting ALL.
 
 ```{r class_plot_2}
-plot(messina_fit_2, i = 1:2)
+plot(messina_fit_2, i = 1:10)
 ```
 
 By varying the minimum sensitivity and specificity requirements, Messina permits flexible 
@@ -109,6 +126,39 @@ tuning of the classifiers' performance to suit different requirements.
 ## Using Messina to detect differential expression in the presence of outliers
 
 TODO
+
+To illustrate the power of Messina to detect differential expression in the presence of
+sample heterogeneity and outliers, we compare it to a basic T-test, again looking for
+the difference in expression between ALL and normal bone marrow.
+
+First we perform the Messina fit on the data from the previous section, using minimum
+sensitivity and specificity values of 70%.  This is a good starting point for 
+differential expression analysis, but can be varied according to the desired robustness
+to outliers.
+
+```{r de_fit_messina}
+messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, min_spec = 0.7, seed = 1234)
+messina_fit_diffexp
+```
+
+We then perform a basic T-test against each feature.
+
+```{r de_fit_ttest}
+ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) t.test(xvals ~ sample_is_all)$p.value)
+ttest_fit_diffexp_pvalues_bh = p.adjust(ttest_fit_diffexp_pvalues, "BH")
+```
+
+We plot the results to compare them.  For this example, we'll call features with corrected 
+P-values less than 0.01 detected by the T-test, and features with margins of at least 1
+detected by Messina.
+```{r de_messina_vs_ttest}
+plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
+abline(h = 0.01)
+abline(v = 1)
+table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$margin >= 1)
+```
+
+
 
 ## Using Messina to determine the best features to predict survival outcome
 
