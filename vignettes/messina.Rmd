@@ -1,0 +1,95 @@
+<!--
+%\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Using Messina}
+%\VignetteDepends{leukemiasEset}
+%\VignetteDepends{Biobase}
+%\VignetteDepends{messina}
+-->
+
+```{r setup, include=FALSE}
+```
+
+## Using Messina to find genes that optimally distinguish between sample groups
+
+To demonstrate the use of Messina in constructing single-gene classifiers to 
+distinguish between two sample groups, we use the MILE leukemia expression dataset
+in Bioconductor package leukemiasEset:
+```{r}
+library(messina)
+library(leukemiasEset)
+data(leukemiasEset)
+```
+
+We will compare CML samples to healthy bone marrow samples.  We start by extracting
+the expression and sample type data, and subsetting to just CML and NoL (normal bone
+marrow) samples:
+```{r}
+sample_type = pData(leukemiasEset)$LeukemiaType
+expression_matrix = exprs(leukemiasEset)
+normal_or_cml = sample_type %in% c("NoL", "CML")
+sample_type = sample_type[normal_or_cml]
+expression_matrix = expression_matrix[,normal_or_cml]
+```
+
+The expression matrix and sample type vectors now contain only data for CML or normal
+bone marrow samples.
+```{r}
+dim(expression_matrix)
+sample_type
+head(expression_matrix, 3)
+```
+
+Messina does not require gene filtering, so we do not perform it at this stage, although
+in very large datasets this may be useful to reduce runtimes.  Simulation studies have
+indicated that Messina's false-discovery rate is acceptably low (< 10%) under most conditions,
+so filtering is not necessary for FDR control.
+
+We now create a binary variable indicating whether a given sample is CML or not, then run
+Messina.  We start with stringent parameters (minimum sensitivity and specificity both 1)
+to yield classifiers with high performance, but possibly reduced robustness to noise.  Note
+that Messina works best with more relaxed parameters than these; and in this case the
+function warns that the user is probably better off using a classical statistical test.
+
+```{r}
+sample_is_cml = sample_type == "CML"
+
+messina_fit_1 = messina(expression_matrix, sample_is_cml, min_sens = 0.95, min_spec = 0.95, seed = 1234)
+messina_fit_1
+```
+
+To see the top hits of the algorithm, we use the plot function, specifying that we wish the
+two best features (by margin size) to be displayed:
+
+```{r}
+plot(messina_fit_1, i = 1:2)
+```
+
+Messina's strength is that it can be tuned to find more noise-robust classifiers, by relaxing its performance
+requirements.  If we are willing to accept a reduced specificity in CML diagnosis (ie. some
+normal samples will be called as CML), in return for robustness to assay variations, we
+can run Messina with altered parameters:
+
+```{r}
+messina_fit_2 = messina(expression_matrix, sample_is_cml, min_sens = 0.95, min_spec = 0.6, seed = 1234)
+messina_fit_2
+```
+
+The classifiers now found by Messina have wider margins, and therefore are more robust to
+noise and experimental or technical variations, but as a trade-off are more likely to report
+false positives when detecting CML.
+
+```{r}
+plot(messina_fit_2, i = 1:2)
+```
+
+By varying the minimum sensitivity and specificity requirements, Messina permits flexible 
+tuning of the classifiers' performance to suit different requirements.
+
+## Using Messina to detect differential expression in the presence of outliers
+
+TODO
+
+## Using Messina to determine the best features to predict survival outcome
+
+TODO
+
