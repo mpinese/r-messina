@@ -56,7 +56,7 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_
 	n_test = ceiling((1 - f_train) * nrow(y))
 
 	cat("Performance bootstrapping...\n")
-	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, min_group_frac, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = "time")
+	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, min_group_frac, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = ifelse(parallel, "none", "time"))
 
 	rownames(boot_objs) = rownames(x)
 	colnames(boot_objs) <- NULL
@@ -289,7 +289,7 @@ messinaSurvTrainOnSubset = function(x, y, min_group_frac, obj_min, obj_func, sub
 			{
 				return(NULL)
 			}
-		}, .parallel = parallel, .progress = "time")
+		}, .parallel = parallel, .progress = ifelse(parallel, "none", "time"))
 	
 	return(fits)
 }

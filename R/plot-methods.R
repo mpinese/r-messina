@@ -171,11 +171,23 @@ messinaSurvObjPlot = function(object, i)
 
 	objective_surfaces = object@fits@objective_surfaces[[i]]
 	plot_data = data.frame(Objective = objective_surfaces$objective, Cutoff = objective_surfaces$cutoff)
+
+	cutoff_fracs = sapply(plot_data$Cutoff, function(cutoff) mean(parameters@x[i,] <= cutoff))
+	cutoff_frac_ok = pmin(cutoff_fracs, 1 - cutoff_fracs) >= parameters@minimum_group_fraction
 	
+	plot_data$Colour = c("darkgrey", "black")[cutoff_frac_ok + 1]
+	
+#	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective, color = Colour)) + 
 	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
 		geom_line(alpha = 0.5) + 
 		geom_point()
-		
+
+	if (zapsmall(parameters@minimum_group_fraction) != 0)
+	{
+		theplot = theplot + 
+			geom_vline(xintercept = c(max(plot_data$Cutoff[cutoff_fracs <= parameters@minimum_group_fraction]), min(plot_data$Cutoff[cutoff_fracs >= (1-parameters@minimum_group_fraction)])), lty = "dotted", alpha = 0.5)
+	}
+
 	if (objective_type %in% c("tau", "reltau"))
 	{
 		theplot = theplot + 
@@ -185,7 +197,9 @@ messinaSurvObjPlot = function(object, i)
 	}
 	else if (objective_type == "coxcoef")
 	{	
+		y_limit = max(c(objective_min, abs(plot_data$Objective)[pmin(cutoff_fracs, 1 - cutoff_fracs) >= parameters@minimum_group_fraction]))
 		theplot = theplot + 
+			coord_cartesian(ylim = c(-y_limit, y_limit)*1.3) + 
 			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
 			geom_hline(yintercept = 0, lty = "solid", alpha = 0.5)
 	}
@@ -231,7 +245,8 @@ calcKaplanMeierEstimatesOnBootstrapSample = function(y, x)
 calcBootstrapKaplanMeierEstimates = function(y, x, nboot, parallel)
 {
 	xvals = sort(as.character(unique(x)))
-	results1 = rlply(nboot, calcKaplanMeierEstimatesOnBootstrapSample(y, x), .parallel = parallel)
+#	results1 = rlply(nboot, calcKaplanMeierEstimatesOnBootstrapSample(y, x))
+	results1 = llply(as.list(1:nboot), function(dummy) calcKaplanMeierEstimatesOnBootstrapSample(y, x), .parallel = parallel)		# Using instead of rlply so we can get .parallel
 	results2 = llply(xvals, function(xi) llply(results1, function(ri) ri[[xi]]))
 	names(results2) = xvals
 	return(results2)
