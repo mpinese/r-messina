@@ -16,7 +16,8 @@ Depends:
 	gridExtra (>= 0.9.1),
 	methods
 Suggests:
-	knitr (>= 1.5)
+	knitr (>= 1.5),
+	knitcitations (>= 0.5-0)
 LinkingTo: Rcpp
 Collate:
     'messina-package.R'
