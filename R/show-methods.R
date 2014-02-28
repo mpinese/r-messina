@@ -42,10 +42,7 @@ setMethod("show", signature = "MessinaFits", definition = function(object)
 	cat("  ", sum(object@summary$passed), " / ", length(object@summary$passed), sprintf(" features passed performance requirements (%.2f%%)\n", mean(object@summary$passed)*100), sep = "")
 	cat("  Top features:\n")
 	
-	n = min(10, sum(object@summary$passed))
-	perm = order(-object@summary$margin)
-	ordered = object@summary[perm,][1:n,]
-	print(ordered)
+	messinaTopTable(object, 10)
 	
 	invisible(NULL)
 })

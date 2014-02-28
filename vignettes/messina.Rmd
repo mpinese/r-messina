@@ -88,6 +88,7 @@ To see the top hits of the algorithm, we use the plot function, specifying that 
 two best features (by margin size) to be displayed:
 
 ```{r class_plot_1_point}
+topTable(messina_fit_1, n = 20)
 plot(messina_fit_1, i = 1:2)
 ```
 
