@@ -195,7 +195,7 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		return ERR_MALLOC;
 	}
 
-	printf("Performance bootstrapping...\n");
+	Rprintf("Performance bootstrapping...\n");
 
 	for (gene = 0; gene < n_genes; gene++)
 	{
@@ -205,15 +205,15 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 			progress_bar_frac_done = float(gene + 1) / n_genes;
 			progress_bar_n_done = uint16_t(progress_bar_frac_done * progress_bar_width);
 
-			printf("%3.0f%% [", progress_bar_frac_done * 100);
+			Rprintf("%3.0f%% [", progress_bar_frac_done * 100);
 			for (progress_bar_i = 0; progress_bar_i < progress_bar_n_done; progress_bar_i++)
-				printf("=");
+				Rprintf("=");
 
 			for (; progress_bar_i < progress_bar_width; progress_bar_i++)
-				printf(" ");
+				Rprintf(" ");
 			
-			printf("]\r");
-			fflush(stdout);
+			Rprintf("]\r");
+			//fflush(stdout);
 		}
 		
 		// User interrupt testing; run only every now and then.
@@ -257,8 +257,8 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		results[gene].p_successful = float(n_successful) / n_iters;
 	}
 
-	printf("\n");
-	fflush(stdout);
+	Rprintf("\n");
+	//fflush(stdout);
 
 	delete train_indices;
 	delete test_indices;

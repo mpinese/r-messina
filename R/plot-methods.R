@@ -9,7 +9,7 @@ setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"),
 
 messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_type = "point")
 {
-	#Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 	
 	n = nrow(object@parameters@x)
 	
@@ -164,6 +164,8 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 
 messinaSurvObjPlot = function(object, i)
 {
+	Cutoff = Objective = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+
 	parameters = object@parameters
 	objective_type = parameters@perf_requirement$objective_type
 	objective_min = parameters@perf_requirement$min_objective
@@ -290,6 +292,8 @@ calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(un
 
 messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot, parallel)
 {
+	Time = Survival = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+
 	group = factor(rep("GROUP", nrow(y)))
 	full_km = calcKaplanMeierEstimates(y, group)[[1]]
 	
@@ -339,6 +343,8 @@ messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot, 
 
 messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot, parallel)
 {
+	Time = Survival = Group = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+
 	stopifnot(all(group %in% c(TRUE, FALSE, 0, 1)))
 	group = group*1
 	
