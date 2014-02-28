@@ -20,6 +20,8 @@
  *          Changed selectTestSet to use the internal R PRNG. 
  *          Changed asserts to Rcpp stops.
  * 20140131	Added progress bar code.
+ * 20140228 Changed printf calls to Rprintf.
+ *          Made progress bar optional with flag.
  */
 
 #include <Rcpp.h>
@@ -153,7 +155,7 @@ inline void calcPerformanceStats(const Perf& sum, const Perf& sum_sq, Perf& mean
 }
 
 
-STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *results)
+STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *results, bool progress, bool silent)
 {
 	// classifier.init has been called by the caller of this function.
 	// results is assumed to be already allocated, and is a pointer to the start of an
@@ -195,25 +197,28 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		return ERR_MALLOC;
 	}
 
-	Rprintf("Performance bootstrapping...\n");
+	if (!silent)
+		Rprintf("Performance bootstrapping...\n");
 
 	for (gene = 0; gene < n_genes; gene++)
 	{
-		// Progress bar code
-		if (gene % 100 == 0 || gene == n_genes - 1)
+		if (!silent && progress)
 		{
-			progress_bar_frac_done = float(gene + 1) / n_genes;
-			progress_bar_n_done = uint16_t(progress_bar_frac_done * progress_bar_width);
+			// Progress bar code
+			if (gene % 100 == 0 || gene == n_genes - 1)
+			{
+				progress_bar_frac_done = float(gene + 1) / n_genes;
+				progress_bar_n_done = uint16_t(progress_bar_frac_done * progress_bar_width);
 
-			Rprintf("%3.0f%% [", progress_bar_frac_done * 100);
-			for (progress_bar_i = 0; progress_bar_i < progress_bar_n_done; progress_bar_i++)
-				Rprintf("=");
+				Rprintf("%3.0f%% [", progress_bar_frac_done * 100);
+				for (progress_bar_i = 0; progress_bar_i < progress_bar_n_done; progress_bar_i++)
+					Rprintf("=");
 
-			for (; progress_bar_i < progress_bar_width; progress_bar_i++)
-				Rprintf(" ");
-			
-			Rprintf("]\r");
-			//fflush(stdout);
+				for (; progress_bar_i < progress_bar_width; progress_bar_i++)
+					Rprintf(" ");
+				
+				Rprintf("]\r");
+			}
 		}
 		
 		// User interrupt testing; run only every now and then.
@@ -257,8 +262,8 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		results[gene].p_successful = float(n_successful) / n_iters;
 	}
 
-	Rprintf("\n");
-	//fflush(stdout);
+	if (!silent)
+		Rprintf("\n");
 
 	delete train_indices;
 	delete test_indices;

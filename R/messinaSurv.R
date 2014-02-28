@@ -160,6 +160,12 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		if (typeof(fit) == "try-error")	{ return(NA) }
 		return(coef(fit))
 	}
+	#~ else if (func == "llrp")
+	#~ {
+		#~ fit = try(survdiff(y ~ x))
+		#~ if (typeof(fit) == "try-error")	{ return(NA) }
+		
+	#~ }
 	else
 	{
 		stop(sprintf("Unknown objective function \"%s\"", func))

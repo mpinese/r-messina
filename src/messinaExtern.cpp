@@ -11,6 +11,7 @@
  * Changelog:
  * 20121010 Wrote.
  * 20130603 Placed under the EPL licence.
+ * 20140228 Added progress and silent options.
  */
 
 #include <Rcpp.h>
@@ -37,7 +38,7 @@ using namespace std;
 // R interface declaration ///////////////////////////////////////////////////////////////////
 extern "C" 
 {
-	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed);
+	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed, SEXP Rprogress, SEXP Rsilent);
 }
 
 // Internal function declarations ////////////////////////////////////////////////////////////
@@ -55,11 +56,13 @@ SEXP convertResults2R(Result *results, uint32_t n_results);
 	Rminsens	Float			Minimum classifier sensitivity.
 	Rminspec	Float			Minimum classifier specificity.
 	Rseed		Integer			PRNG seed.
+	Rprogress	Logical			Display progress bar?
+	Rsilent		Logical			Be completely silent (except for errors or warnings)?
 
 	The Messina code populates an array of type Result (defined in Classifier.h), which then
 	is converted back to SEXP objects for return to R.
 */
-SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed)
+SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed, SEXP Rprogress, SEXP Rsilent)
 {
 	BEGIN_RCPP
 
@@ -74,6 +77,8 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	STATUS err;
 	string errmsg;
 	SEXP retval;
+	bool progress = as<bool>(Rprogress);
+	bool silent = as<bool>(Rsilent);
 	
 	RNGScope scope;	
 	
@@ -100,7 +105,7 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 		return wrap<string>(errmsg);
 	}
 	
-	if ((err = CrossVal::cv(n_train, n_boot, classifier, results)) != OK)
+	if ((err = CrossVal::cv(n_train, n_boot, classifier, results, progress, silent)) != OK)
 	{
 		delete results;
 		errmsg.assign(getErrorMsg(err));

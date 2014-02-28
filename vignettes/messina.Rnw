@@ -10,22 +10,20 @@ BiocStyle::latex()
 
 <<setup, include=FALSE, cache=FALSE>>=
 library(knitr)
-library(knitcitations)
-cleanbib()
 @
 
-
 \title{Using Messina}
-
 \author{Mark Pinese}
 
 \maketitle
+
+\tableofcontents
 
 \section{Introduction}
 
 Messina is a package of algorithms for generating optimal single-gene
 threshold classifiers. These classifiers are directly useful when using
-continuous data (eg gene expression measurements) to develop diagnostic
+continuous data (eg. gene expression measurements) to develop diagnostic
 or prognostic tests that will be based on binary assays such as
 immunohistochemistry.
 
@@ -39,15 +37,13 @@ subtypes, and Messina can be used to detect features that could be
 reflective of underlying, and undiscovered, sample subtypes.
 
 The original Messina algorithm for classification and differential
-expression analysis is described in the Messina paper
-\texttt{r citep("10.1371/journal.pone.0005337")}.
+expression analysis is described in the Messina paper \cite{Pinese:2009}.
 
-\section{Using Messina to find genes that optimally distinguish 
-between sample groups}
+\section{Finding genes that optimally distinguish between sample groups}
 
 To demonstrate the use of Messina in constructing single-gene
 classifiers to distinguish between two sample groups, we use the MILE
-leukemia expression dataset in Bioconductor package leukemiasEset:
+leukemia expression dataset in Bioconductor package \Biocexptpkg{leukemiasEset}:
 <<class-load-libs, message=FALSE>>=
 library(messina)
 library(leukemiasEset)
@@ -77,8 +73,7 @@ Messina does not require gene filtering, so we do not perform it at this
 stage, although in very large datasets this may be useful to reduce
 runtimes. Simulation studies have indicated that Messina's
 false-discovery rate is acceptably low (\textless{} 10\%) under most
-conditions, so filtering is not necessary for FDR control
-\texttt{r citep("10.1371/journal.pone.0005337")}.
+conditions, so filtering is not necessary for FDR control \cite{Pinese:2009}.
 
 We now create a binary variable indicating whether a given sample is ALL
 or not, then run Messina. We start with stringent parameters (minimum
@@ -90,7 +85,8 @@ statistical test.
 
 <<class_fit_1>>=
 sample_is_all = sample_type == "ALL"
-messina_fit_1 = messina(expression_matrix, sample_is_all, min_sens = 0.95, min_spec = 0.95, seed = 1234)
+messina_fit_1 = messina(expression_matrix, sample_is_all, min_sens = 0.95, 
+	min_spec = 0.95, seed = 1234, progress = FALSE)
 @
 
 The result of the messina call is a MessinaClassResult object, and we
@@ -129,7 +125,8 @@ samples will be called as ALL), in return for robustness to assay
 variations, we can run Messina with altered parameters:
 
 <<class_fit_2>>=
-messina_fit_2 = messina(expression_matrix, sample_is_all, min_sens = 0.95, min_spec = 0.6, seed = 1234)
+messina_fit_2 = messina(expression_matrix, sample_is_all, min_sens = 0.95, 
+	min_spec = 0.6, seed = 1234, progress = FALSE)
 messina_fit_2
 @
 
@@ -146,8 +143,7 @@ By varying the minimum sensitivity and specificity requirements, Messina
 permits flexible tuning of the classifiers' performance to suit
 different requirements.
 
-\section{Using Messina to detect differential expression in the
-presence of outliers}
+\section{Detecting differential expression in the presence of outliers}
 
 TODO
 
@@ -162,14 +158,16 @@ starting point for differential expression analysis, but can be varied
 according to the desired robustness to outliers.
 
 <<de_fit_messina>>=
-messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, min_spec = 0.7, seed = 1234)
+messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, 
+	min_spec = 0.7, seed = 1234, progress = FALSE)
 messina_fit_diffexp
 @
 
 We then perform a basic T-test against each feature.
 
 <<de_fit_ttest>>=
-ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) t.test(xvals ~ sample_is_all)$p.value)
+ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) 
+	t.test(xvals ~ sample_is_all)$p.value)
 ttest_fit_diffexp_pvalues_bh = p.adjust(ttest_fit_diffexp_pvalues, "BH")
 @
 
@@ -177,21 +175,24 @@ We plot the results to compare them. For this example, we'll call
 features with corrected P-values less than 0.01 detected by the T-test,
 and features with margins of at least 1 detected by Messina.
 <<de_messina_vs_ttest>>=
-plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
+plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", 
+	xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
 abline(h = 0.01)
 abline(v = 1)
 table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$margin >= 1)
 @
 
-\section{Using Messina to determine the best features to predict
-survival outcome}
+\section{Identifying the best features to predict survival outcome}
 
 TODO
 
-\section{Bibliography}
-
-<<biblio, echo=FALSE, results='asis'>>=
-bibliography()
+\section{Session info}
+<<sessionInfo, print=TRUE, eval=TRUE>>=
+sessionInfo()
 @
 
+\bibliographystyle{plain}
+\bibliography{../REFERENCES}
+
 \end{document}
+
