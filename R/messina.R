@@ -17,7 +17,9 @@
 #'   bootstrap rounds.
 #' @param n_boot the number of bootstrap rounds to use.
 #' @param seed an optional random seed for the analysis.  If NULL, a random seed 
-#    derived from the current state of the PRNG is used.
+#'   derived from the current state of the PRNG is used.
+#' @param progress display a progress bar tracking the computation?
+#' @param silent be completely silent (except for error and warning messages)?
 #' @return an object of class "MessinaClassResult" containing the results of the analysis.
 #'
 #' @export
@@ -26,7 +28,7 @@
 #' @seealso \code{\link{messinaSurv}}
 # @cite Pinese:2009
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
-messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL)
+messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL, progress = TRUE, silent = FALSE)
 {
 	if (class(x) == "ExpressionSet")
 	{
@@ -50,6 +52,11 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	# Calculate the number of training samples in each round.
 	n_train = round(ncol(x) * f_train)
 	n_train = min(max(2, n_train), ncol(x) - 1)
+	
+	progress = as.logical(progress)
+	silent = as.logical(silent)
+	if (is.na(progress))	{ progress = FALSE }
+	if (is.na(silent))		{ silent = FALSE }
 	
 	# Basic error checking.
 	target_AUC = (min_spec + min_sens) / 2
@@ -92,7 +99,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	if (length(seed) == 0)	seed = as.integer(runif(1, 1, 2^32 - 1))
 	
 	# Call the external C functions for the actual calculation.
-	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed)
+	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed, progress, silent)
 	
 	if (typeof(result) == "character")
 	{
@@ -179,7 +186,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 }
 
 
-messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed)
+messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, Rprogress, Rsilent)
 {
-	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, PACKAGE = "messina")
+	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, Rprogress, Rsilent, PACKAGE = "messina")
 }
