@@ -18,7 +18,8 @@ Depends:
 Suggests:
     knitr (>= 1.5),
     knitcitations (>= 0.5-0),
-	leukemiasEset (>= 0.99.4)
+	leukemiasEset (>= 0.99.4),
+	BiocStyle
 LinkingTo: Rcpp
 BuildDepends: roxygen2 (>= 3.1.0)
 VignetteBuilder: knitr
