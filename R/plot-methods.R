@@ -1,7 +1,9 @@
 if (!isGeneric("plot"))		{ setGeneric("plot", function(x, y, ...) standardGeneric("plot")) }
 
+#' @export
 setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing"), definition = function(x, y, ...) messinaClassPlot(object = x, ...))
 
+#' @export
 setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"), definition = function(x, y, ...) messinaSurvPlot(object = x, ...))
 
 

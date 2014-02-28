@@ -1,10 +1,9 @@
 \name{messina}
 \alias{messina}
-\title{Identify features that can optimally separate two classes of samples, subject
-to minimum performance requirements.}
+\title{Run the Messina algorithm to find features (eg. genes) that optimally distinguish
+between two classes of samples, subject to minimum performance requirements.}
 \usage{
-  messina(x, y, min_sens, min_spec, f_train = 0.9,
-    n_boot = 50, seed = NULL)
+messina(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL)
 }
 \arguments{
   \item{x}{feature expression values, either supplied as an
@@ -27,24 +26,24 @@ to minimum performance requirements.}
 
   \item{n_boot}{the number of bootstrap rounds to use.}
 
-  \item{seed}{an optional random seed for the analysis.}
+  \item{seed}{an optional random seed for the analysis.  If
+  NULL, a random seed}
 }
 \value{
-  an object of class "MessinaResult" containing the results
-  of the analysis.
+an object of class "MessinaClassResult" containing the
+results of the analysis.
 }
 \description{
-  TODO
+TODO
 }
 \author{
-  Mark Pinese \email{m.pinese@garvan.org.au}
-}
-\references{
-  TODO
+Mark Pinese \email{m.pinese@garvan.org.au}
 }
 \seealso{
-  \code{\link{MessinaResult-class}}
+\code{\link{MessinaClassResult-class}}
 
-  \code{\link{ExpressionSet}}
+\code{\link{ExpressionSet}}
+
+\code{\link{messinaSurv}}
 }
 

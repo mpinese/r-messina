@@ -11,19 +11,15 @@ Depends:
     R (>= 2.13.0),
     Rcpp (>= 0.10.3),
     survival (>= 2.37-4),
-	plyr (>= 1.8),
+    plyr (>= 1.8),
     ggplot2 (>= 0.9.3.1),
-	gridExtra (>= 0.9.1),
-	methods
+    gridExtra (>= 0.9.1),
+    methods
 Suggests:
-	knitr (>= 1.5),
-	knitcitations (>= 0.5-0)
+    knitr (>= 1.5),
+    knitcitations (>= 0.5-0)
+Imports:
+    Rcpp (>= 0.10.3)
 LinkingTo: Rcpp
-Collate:
-    'messina-package.R'
-    'messina.R'
-    'messinaSurv.R'
-	'AllClasses.R'
-	'plot-methods.R'
-	'show-methods.R'
+BuildDepends: roxygen2 (>= 3.1.0)
 VignetteBuilder: knitr

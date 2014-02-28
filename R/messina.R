@@ -1,12 +1,6 @@
-messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed)
-{
-	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, PACKAGE = "messina")
-}
-
-
 #' Run the Messina algorithm to find features (eg. genes) that optimally distinguish
 #' between two classes of samples, subject to minimum performance requirements.
-#'
+#' 
 #' TODO
 #' 
 #' @param x feature expression values, either supplied as an ExpressionSet, or as
@@ -24,11 +18,13 @@ messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rse
 #' @param n_boot the number of bootstrap rounds to use.
 #' @param seed an optional random seed for the analysis.  If NULL, a random seed 
 #    derived from the current state of the PRNG is used.
-#' @return an object of class "MessinaResult" containing the results of the analysis.
+#' @return an object of class "MessinaClassResult" containing the results of the analysis.
+#'
 #' @export
-#' @seealso \code{\link{MessinaResult-class}}
+#' @seealso \code{\link{MessinaClassResult-class}}
 #' @seealso \code{\link{ExpressionSet}}
-#' @references TODO
+#' @seealso \code{\link{messinaSurv}}
+# @cite Pinese:2009
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL)
 {
@@ -180,4 +176,10 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	
 	
 	return(result2)
+}
+
+
+messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed)
+{
+	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, PACKAGE = "messina")
 }

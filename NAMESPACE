@@ -1,12 +1,7 @@
-# For Rcpp integration:
-useDynLib(messina)
-
-# Export the main fitting functions
 export(messina)
 export(messinaSurv)
-
-# Export the Messina custom classes
-exportClasses(MessinaClassResult, MessinaSurvResult)
-
-importFrom("graphics", plot)
-exportMethods(plot, show)
+exportClasses(MessinaClassResult)
+exportClasses(MessinaSurvResult)
+exportMethods(plot)
+exportMethods(show)
+useDynLib(messina)
