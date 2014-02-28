@@ -11,7 +11,7 @@ messinaTopTable = function(fits, n = 10)
 {
 	summary = fits@summary
 	n = min(n, nrow(summary))
-	summary = summary[order(-summary$margin),]
+	summary = summary[order(-summary$passed, -summary$margin),]
 	summary = summary[,c("passed", "type", "threshold", "posk", "margin")]
 	summary$posk = c(-1, 1)[summary$posk + 1]
 	colnames(summary) = c("Passed Requirements", "Classifier Type", "Threshold Value", "Direction", "Margin")
