@@ -135,7 +135,7 @@ messinaSurvObjectiveFunc = function(x, y, func)
 {
 	if (func == "tau")
 	{
-		counts = survival:::survConcordance.fit(y, x)
+		counts = survival::survConcordance.fit(y, x)
 		agree = counts["concordant"]
 		disagree = counts["discordant"]
 		tied.time = counts["tied.time"]
@@ -147,7 +147,7 @@ messinaSurvObjectiveFunc = function(x, y, func)
 	}
 	else if (func == "reltau")
 	{
-		counts = survival:::survConcordance.fit(y, x)
+		counts = survival::survConcordance.fit(y, x)
 		agree = counts["concordant"]
 		disagree = counts["discordant"]
 		reltau = agree/(agree+disagree)
