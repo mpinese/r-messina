@@ -38,7 +38,7 @@
 #' @return an object of class "MessinaSurvResult" containing the results of the analysis.
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
-#' @seealso \code{\link{ExpressionSet}}
+#' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messina}}
 # @cite Pinese:2009
 # @cite Pinese:inpress-a

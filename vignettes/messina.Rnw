@@ -1,4 +1,8 @@
 %\VignetteEngine{knitr::knitr}
+%\VignetteIndexEntry{Using Messina}
+%\VignetteDepends{messina,leukemiasEset}
+%\VignetteKeywords{messina,messinaSurv}
+%\VignettePackage{messina}
 
 \documentclass{article}
 

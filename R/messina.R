@@ -24,7 +24,7 @@
 #'
 #' @export
 #' @seealso \code{\link{MessinaClassResult-class}}
-#' @seealso \code{\link{ExpressionSet}}
+#' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messinaSurv}}
 # @cite Pinese:2009
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
