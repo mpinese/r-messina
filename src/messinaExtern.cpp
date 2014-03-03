@@ -12,6 +12,7 @@
  * 20121010 Wrote.
  * 20130603 Placed under the EPL licence.
  * 20140228 Added progress and silent options.
+ * 20140302	Removed unnecessary seed parameter.
  */
 
 #include <Rcpp.h>
@@ -38,7 +39,7 @@ using namespace std;
 // R interface declaration ///////////////////////////////////////////////////////////////////
 extern "C" 
 {
-	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed, SEXP Rprogress, SEXP Rsilent);
+	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rprogress, SEXP Rsilent);
 }
 
 // Internal function declarations ////////////////////////////////////////////////////////////
@@ -55,21 +56,19 @@ SEXP convertResults2R(Result *results, uint32_t n_results);
 	Rn_train	Integer			Number of samples to draw for training in each bootstrap iteration.
 	Rminsens	Float			Minimum classifier sensitivity.
 	Rminspec	Float			Minimum classifier specificity.
-	Rseed		Integer			PRNG seed.
 	Rprogress	Logical			Display progress bar?
 	Rsilent		Logical			Be completely silent (except for errors or warnings)?
 
 	The Messina code populates an array of type Result (defined in Classifier.h), which then
 	is converted back to SEXP objects for return to R.
 */
-SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rseed, SEXP Rprogress, SEXP Rsilent)
+SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rprogress, SEXP Rsilent)
 {
 	BEGIN_RCPP
 
 	NumericMatrix x(Rx);
 	LogicalVector cls(Rcls);
 	
-	uint32_t seed = as<uint32_t>(Rseed);
 	uint32_t n_boot = as<uint32_t>(Rn_boot);
 	uint32_t n_train = as<uint32_t>(Rn_train);
 	float minsens = as<float>(Rminsens);

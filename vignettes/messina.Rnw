@@ -187,7 +187,7 @@ table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$marg
 TODO
 
 \section{Session info}
-<<sessionInfo, print=TRUE, eval=TRUE>>=
+<<sessionInfo, eval=TRUE>>=
 sessionInfo()
 @
 
