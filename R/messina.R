@@ -49,6 +49,11 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	n_boot = as.integer(n_boot)
 	seed = as.integer(seed)
 
+	if (length(seed) != 0)
+	{
+		set.seed(seed)
+	}
+
 	# Calculate the number of training samples in each round.
 	n_train = round(ncol(x) * f_train)
 	n_train = min(max(2, n_train), ncol(x) - 1)
@@ -95,11 +100,8 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 	xtrans[xtrans == 65536] = 65535		# Just in case of rounding errors.
 	stopifnot(all(xtrans <= 65535) & all(xtrans >= 0))
 	
-	# Get a random seed if one wasn't supplied
-	if (length(seed) == 0)	seed = as.integer(runif(1, 1, 2^32 - 1))
-	
 	# Call the external C functions for the actual calculation.
-	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, seed, progress, silent)
+	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, progress, silent)
 	
 	if (typeof(result) == "character")
 	{
@@ -186,7 +188,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 }
 
 
-messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, Rprogress, Rsilent)
+messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent)
 {
-	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rseed, Rprogress, Rsilent, PACKAGE = "messina")
+	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent, PACKAGE = "messina")
 }
