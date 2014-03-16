@@ -18,6 +18,7 @@ Depends:
 Suggests:
     knitr (>= 1.5),
     leukemiasEset (>= 0.99.4),
+    Biobase (>= 2.22.0),
     BiocStyle
 LinkingTo: Rcpp
 BuildDepends: roxygen2 (>= 3.1.0)

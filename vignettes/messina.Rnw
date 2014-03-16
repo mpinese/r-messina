@@ -106,7 +106,7 @@ specifying that we wish the two best features (by margin size) to be
 displayed:
 
 <<class_plot_1_point>>=
-topTable(messina_fit_1, n = 20)
+messinaTopResults(messina_fit_1, n = 20)
 plot(messina_fit_1, i = 1:2)
 @
 

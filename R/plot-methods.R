@@ -1,9 +1,25 @@
 if (!isGeneric("plot"))		{ setGeneric("plot", function(x, y, ...) standardGeneric("plot")) }
 
+
+#' Plot the results of a Messina analysis on a classification / differential expression problem.
+#' 
+#' TODO
+#' 
 #' @export
+#' @seealso \code{\link{MessinaClassResult-class}}
+#' @seealso \code{\link{messina}}
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing"), definition = function(x, y, ...) messinaClassPlot(object = x, ...))
 
+
+#' Plot the results of a Messina analysis on a survival problem.
+#' 
+#' TODO
+#' 
 #' @export
+#' @seealso \code{\link{MessinaSurvResult-class}}
+#' @seealso \code{\link{messinaSurv}}
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"), definition = function(x, y, ...) messinaSurvPlot(object = x, ...))
 
 
@@ -55,7 +71,7 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 
 		if (plot_type == "point")		{ theplot = theplot + geom_point(stat = "identity") }
 		else if (plot_type == "bar")	{ theplot = theplot + geom_bar(stat = "identity", width = 0.5) }
-		else 							{ stop(sprintf("Invalid Messina plot type: \"%s\"", type)) }	
+		else 							{ stop(sprintf("Invalid Messina plot type: \"%s\"", plot_type)) }	
 
 		if (!is.na(threshold))
 		{
@@ -76,7 +92,7 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 }
 
 
-messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1))
+messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1))
 {
 	if (!(bootstrap_type %in% c("none", "ci", "stdev")))
 	{
@@ -138,7 +154,7 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 			km_plot_all = messinaSurvKMplotSingleGroup(y = y, bootstrap_type = bootstrap_type, bootstrap_ci = bootstrap_ci, nboot = nboot, parallel = parallel) + 
 				ggtitle(paste("KM of Full Cohort (no valid threshold found)", bootstrap_string, sep = "\n"))
 			
-			theplot = grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Failed Fit: Feature %s", feature))
+			grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Failed Fit: Feature %s", feature))
 		}
 		else
 		{
@@ -152,10 +168,8 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 				ggtitle(paste("Separation at Upper Margin", bootstrap_string, sep = "\n")) + 
 				theme(legend.position = "bottom")
 			
-			theplot = grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+			grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
 		}
-		
-		#print(theplot)
 	}
 	
 	return(invisible(NULL))

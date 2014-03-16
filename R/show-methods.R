@@ -1,5 +1,13 @@
-
+#' TODO
+#' 
+#' TODO
+#' 
 #' @export
+#' @seealso \code{\link{MessinaResult-class}}
+#' @seealso \code{\link{messinaSurv}}
+#' @seealso \code{\link{messina}}
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#' @rdname show-methods
 setMethod("show", signature = "MessinaResult", definition = function(object) 
 {
 	cat("An object of class ", class(object), "\n\n", sep = "")
@@ -14,6 +22,7 @@ setMethod("show", signature = "MessinaResult", definition = function(object)
 
 
 #' @export
+#' @rdname show-methods
 setMethod("show", signature = "MessinaParameters", definition = function(object) 
 {
 	cat("  An object of class MessinaParameters\n", sep = "")
@@ -36,13 +45,14 @@ setMethod("show", signature = "MessinaParameters", definition = function(object)
 
 
 #' @export
+#' @rdname show-methods
 setMethod("show", signature = "MessinaFits", definition = function(object) 
 {
 	cat("  An object of class MessinaFits\n", sep = "")	
 	cat("  ", sum(object@summary$passed), " / ", length(object@summary$passed), sprintf(" features passed performance requirements (%.2f%%)\n", mean(object@summary$passed)*100), sep = "")
 	cat("  Top features:\n")
 	
-	messinaTopTable(object, 10)
+	messinaTopResults(object, 10)
 	
 	invisible(NULL)
 })
