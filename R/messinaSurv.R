@@ -43,15 +43,19 @@
 # @cite Pinese:2009
 # @cite Pinese:inpress-a
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
-messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1))
+messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1))
 {
 	stopifnot(class(y) == "Surv")
 
 	if (class(x) == "ExpressionSet")
 	{
-		features = featureNames(x)
-		samples = sampleNames(x)
-		x = exprs(x)
+		if (require(Biobase) == FALSE)
+		{
+			stop("Bioconductor package Biobase must be available to use data in ExpressionSet objects")
+		}
+		features = Biobase::featureNames(x)
+		samples = Biobase::sampleNames(x)
+		x = Biobase::exprs(x)
 	}
 	else
 	{

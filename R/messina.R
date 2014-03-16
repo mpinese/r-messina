@@ -32,9 +32,13 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 {
 	if (class(x) == "ExpressionSet")
 	{
-		features = featureNames(x)
-		samples = sampleNames(x)
-		x = exprs(x)
+		if (require(Biobase) == FALSE)
+		{
+			stop("Bioconductor package Biobase must be available to use data in ExpressionSet objects")
+		}
+		features = Biobase::featureNames(x)
+		samples = Biobase::sampleNames(x)
+		x = Biobase::exprs(x)
 	}
 	else
 	{
