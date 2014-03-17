@@ -3,27 +3,111 @@ if (!isGeneric("plot"))		{ setGeneric("plot", function(x, y, ...) standardGeneri
 
 #' Plot the results of a Messina analysis on a classification / differential expression problem.
 #' 
-#' TODO
+#' Produces a separate plot for each supplied feature index (either as an index into the expression
+#' data x as-supplied, or as an index into the features sorted by Messina margin, depending on the
+#' value of sort_features), showing sample expression levels, group membership, threshold value,
+#' and margin locations.  Two different types of plots can be produced.  See the vignette for
+#' examples.
+#'
+# @usage plot(object, indices = c(1), sort_features = TRUE, plot_type = "bar", ...)
+#'
+#' @param object the result of a Messina analysis, as returned by functions \code{\link{messina}}
+#'   or \code{\link{messinaDE}}.
+#' @param indices a vector of indices of features to plot.  If sort_features == FALSE, the indices
+#'   are into the unsorted features, as originally supplied in x supplied to messina or messinaDE.
+#'   If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
+#'   the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
+#'   the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
+#'   the second best classifier margin will be plotted.
+#' @param sort_features a boolean indicating whether to sort features by decreasing margin size
+#'   before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
+#'   more details see the description of that parameter.
+#' @param plot_type a string giving the type of plot to produce, either "point" or "bar".  "bar"
+#'   is the default, and shows expression levels as horizontal bars.  Although this representation
+#'   is familiar, it can be misleading in the case of log-transformed data.  In that case, the 
+#'   "point" plot type is preferable.
 #' 
+#' @aliases plot,MessinaClassResult-method
+#' @aliases plot,MessinaClassResult,missing-method
+#'
 #' @export
 #' @seealso \code{\link{MessinaClassResult-class}}
 #' @seealso \code{\link{messina}}
+#' @seealso \code{\link{messinaDE}}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#'
+#' @examples
+#' \dontrun{
+#' #TODO
+#' }
 setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing"), definition = function(x, y, ...) messinaClassPlot(object = x, ...))
 
 
+
 #' Plot the results of a Messina analysis on a survival problem.
+#'
+#' Plots diagnostic and performance information for fits in a MessinaSurvResult object, as returned by
+#' \code{\link{messinaSurv}}.
+#'
+#' For each feature index given by indices, produces four plots:
+#' \describe{
+#'   \item{"Objective function"}{A plot of the value of the objective function over all possible thresholds.
+#'     Each sample is represented by a point on the objective function trace.  The selected threshold, if
+#'     any, is shown by a solid vertical line, and the margins by dotted vertical lines on either side of
+#'     it.  The minimum values of the objective function specified by the user are shown as horizontal
+#'     dotted lines.  This plot is useful for assessing fit stability, particularly for the "coxcoef" and
+#'     "reltau" objective functions, which can be unstable at low or high threshold values.  See \code{\link{messinaSurv}}
+#'     for details.}
+#'   \item{"Separation performance at threshold"}{This Kaplan-Meier plot shows two traces, showing the 
+#'     outcomes of the two subgroups in the cohort defined by whether the plotted feature is above or
+#'     below the threshold.  Optionally (if bootstrap_type != "none"), the KM traces will be surrounded
+#'     by shaded regions that represent either +/- 1 SD (bootstrap_type == "stdev") or a bootstrap_ci
+#'     confidence interval (bootstrap_type == "ci").}
+#'   \item{"Separation performance at lower margin"}{This plot is identical to the above, except that the
+#'     performance when the lower margin is used to separate the sample groups is shown.}
+#'   \item{"Separation performance at lower margin"}{This plot is identical to the above, except that the
+#'     performance when the upper margin is used to separate the sample groups is shown.  These last 
+#'     two plots give an indication of the robustness of the MessinaSurv fit at its extremes.}}
+#'
+#' The Kaplan-Meier plots may optionally display bootstrap bands, if bootstrap_type != "none".  Note that
+#' the calculation of bootstrap bands is computationally-intensive, and this function will by default use
+#' multiprocessing to speed calculations if doMC is loaded and more than one core registered for use.
+#' For examples of the plots and their interpretation, see the vignette.
+#'
+# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1)), ...)
+#'
+#' @inheritParams plot,MessinaClassResult,missing-method
+#' @param bootstrap_type a string giving the type of bootstrap error band to produce on the survival prediction
+#'   plots.  Can take three values: "none", "stdev", and "ci".  "none", the default, plots no error bands.
+#'   "stdev" performs multiple rounds of Kaplan-Meier curve estimation on bootstrap samples,
+#'   and plots prediction bands corresponding to +/- 1 bootstrap standard deviation from the mean.  "ci"
+#'   performs bootstrapping as per "stdev", and plots prediction bands corresponding to the bootstrap_ci
+#'   intervals.
+#' @param bootstrap_ci a value in (0.5, 1) giving the confidence interval for bootstrap_type == "ci".  
+#'   Ignored otherwise.  Default 0.9 for 90\% confidence intervals.
+#' @param nboot the number of bootstrap iterations to perform for calculations.  Set to a reasonable default
+#'   taking into account bootstrap_type and bootstrap_ci, so ordinarily does not need to be specified by
+#'   the user.
+#' @param parallel a logical indicating whether multiprocessing using doMC should be used for the bootstrap
+#'   calculations.  The default is to use multiprocessing if doMC is loaded, and more than one parallel
+#'   worker is registered.
 #' 
-#' TODO
-#' 
+#' @aliases plot,MessinaSurvResult-method
+#' @aliases plot,MessinaSurvResult,missing-method
+#'
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
 #' @seealso \code{\link{messinaSurv}}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#'
+#' @examples
+#' \dontrun{
+#' #TODO
+#' }
 setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"), definition = function(x, y, ...) messinaSurvPlot(object = x, ...))
 
 
-messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_type = "point")
+messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_type = "bar")
 {
 	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 	
@@ -143,7 +227,7 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 		threshold = fit_summary$threshold[i]
 		margin = fit_summary$margin[i]
 
-		obj_plot = messinaSurvObjPlot(object, i) + ggtitle("Objective Function")
+		obj_plot = messinaSurvObjPlot(object, i) + ggtitle(sprintf("Objective Function: %s", object@parameters@perf_requirement$objective_type))
 		
 		if (bootstrap_type == "ci")			{ bootstrap_string = sprintf("Shaded area: %.0f%% CI", bootstrap_ci*100) }
 		else if (bootstrap_type == "stdev")	{ bootstrap_string = "Shaded area: +/- 1 SD" }
@@ -178,7 +262,7 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 
 messinaSurvObjPlot = function(object, i)
 {
-	Cutoff = Objective = NULL		# To shut up an R CMD check note for the later use of these in ggplot
+	Threshold = Objective = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 
 	parameters = object@parameters
 	objective_type = parameters@perf_requirement$objective_type
@@ -188,22 +272,22 @@ messinaSurvObjPlot = function(object, i)
 	margin = object@fits@summary$margin[i]
 
 	objective_surfaces = object@fits@objective_surfaces[[i]]
-	plot_data = data.frame(Objective = objective_surfaces$objective, Cutoff = objective_surfaces$cutoff)
+	plot_data = data.frame(Objective = objective_surfaces$objective, Threshold = objective_surfaces$cutoff)
 
-	cutoff_fracs = sapply(plot_data$Cutoff, function(cutoff) mean(parameters@x[i,] <= cutoff))
+	cutoff_fracs = sapply(plot_data$Threshold, function(cutoff) mean(parameters@x[i,] <= cutoff))
 	cutoff_frac_ok = pmin(cutoff_fracs, 1 - cutoff_fracs) >= parameters@minimum_group_fraction
 	
 	plot_data$Colour = c("darkgrey", "black")[cutoff_frac_ok + 1]
 	
-#	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective, color = Colour)) + 
-	theplot = ggplot(data = plot_data, mapping = aes(x = Cutoff, y = Objective)) + 
+#	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective, color = Colour)) + 
+	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective)) + 
 		geom_line(alpha = 0.5) + 
 		geom_point()
 
 	if (zapsmall(parameters@minimum_group_fraction) != 0)
 	{
 		theplot = theplot + 
-			geom_vline(xintercept = c(max(plot_data$Cutoff[cutoff_fracs <= parameters@minimum_group_fraction]), min(plot_data$Cutoff[cutoff_fracs >= (1-parameters@minimum_group_fraction)])), lty = "dotted", alpha = 0.5)
+			geom_vline(xintercept = c(max(plot_data$Threshold[cutoff_fracs <= parameters@minimum_group_fraction]), min(plot_data$Threshold[cutoff_fracs >= (1-parameters@minimum_group_fraction)])), lty = "dotted", alpha = 0.5)
 	}
 
 	if (objective_type %in% c("tau", "reltau"))

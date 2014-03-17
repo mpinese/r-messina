@@ -1,7 +1,24 @@
+#' Find optimal prognostic features using the Messina algorithm.
+#'
 #' Run the MessinaSurv algorithm to find features (eg. genes) that can define groups
 #' of patients with very different survival times.
-#'
+#' 
 #' TODO
+#' 
+#' @section Objective functions: MessinaSurv aims to find those features that can 
+#'   robustly separate patients into long- and short-survivor groups
+#' 
+#' @section Minimum group fraction: The parameter min_group_frac limits the size of
+#'   the smallest subgroups that messinaSurv can select.  As the groups become smaller,
+#'   the "reltau" and "coxcoef" objective functions become unstable, and can generate
+#'   spurious results.  These are seen on the diagnostics produced by the messina
+#'   plot functions as very high objective values at very low and high threshold values.
+#'   To control these results, set min_group_frac to a high enough value that the
+#'   objective functions reliably fit.  Generally, max(0.1, 10/N), where N is the total
+#'   number of patients, is sufficient.  Keep in mind that setting this parameter too high 
+#'   will limit messinaSurv's ability to identify small subsets of patients with dramatically
+#'   different survival from the rest: the smallest subset that will be reliably identified
+#'   is min_group_frac of patients.
 #' 
 #' @param x feature expression values, either supplied as an ExpressionSet, or as
 #'   an object that can be converted to a matrix by as.matrix.  In the latter case,
@@ -19,30 +36,31 @@
 #'   of 0.1 means that no thresholds will be selected that result in a sample split
 #'   yielding a group of smaller than 10% of the samples.  A modest value of this
 #'   parameter increases the stability of the "reltau" and "coxcoef" objectives, which
-#'   tend to become unstable as the number of samples in a group becomes very low.
-#'   This parameter also limits how small a subgroup of samples can be separated from 
-#'   the rest; if knowledge of the problem suggests that a very small subset of patients
-#'   may exist with drastically different survival from the rest, set this to a smaller
-#'   value.  Note that for very small values of min_group_frac, estimation of the survival behaviour of
-#'   the very small subgroup thus generated becomes impossible, and messinaSurv fits will
-#'   likely fail.
+#'   tend to become unstable as the number of samples in a group becomes very low; see
+#'   details.
 #' @param f_train the fraction of samples to be used in the training splits of the
 #'   bootstrap rounds.
 #' @param n_boot the number of bootstrap rounds to use.
-#' @param seed an optional random seed for the analysis.  If NULL, the R PRNG us used
+#' @param seed an optional random seed for the analysis.  If NULL, the R PRNG is used
 #'   as-is.
 #' @param parallel should calculations be parallelized using the doMC framework?  By
 #'   default, parallel mode is used if the doMC library is loaded, and more than one
 #'   core has been registered with registerDoMC().  Note that no progress bar is
 #'   displayed in parallel mode.
+#'
 #' @return an object of class "MessinaSurvResult" containing the results of the analysis.
+#'
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messina}}
-# @cite Pinese:2009
-# @cite Pinese:inpress-a
+#' @seealso \code{\link{messinaDE}}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#'
+#' @examples
+#' \dontrun{
+#' #TODO
+#' }
 messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1))
 {
 	stopifnot(class(y) == "Surv")
@@ -164,12 +182,6 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		if (typeof(fit) == "try-error")	{ return(NA) }
 		return(coef(fit))
 	}
-	#~ else if (func == "llrp")
-	#~ {
-		#~ fit = try(survdiff(y ~ x))
-		#~ if (typeof(fit) == "try-error")	{ return(NA) }
-		
-	#~ }
 	else
 	{
 		stop(sprintf("Unknown objective function \"%s\"", func))

@@ -1,27 +1,12 @@
 Write vignette
 
-Write all man page docs, with examples
-
 Decide on biocViews for package
-
-Add literature references to docs
 
 Add dev.new for new graphics devices, to avoid kludging existing ones
 
 Finalise DESCRIPTION
 
-
-
-Testing:
-  User interrupt of long calculations
-  
-
-Test running without foreach
-
-
 TODO before deployment:
-  * Update entries in src/messina-package.R
-  * Update DESCRIPTION
   * Change copyright to include 2014
   
   

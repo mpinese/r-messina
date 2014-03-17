@@ -1,7 +1,37 @@
+#' Find optimal single feature classifiers
+#' 
 #' Run the Messina algorithm to find features (eg. genes) that optimally distinguish
 #' between two classes of samples, subject to minimum performance requirements.
 #' 
-#' TODO
+#' Note: If you wish to use Messina to detect differential expression, and not construct
+#' classifiers, you may find the \code{\link{messinaDE}} function to be a more convenient
+#' interface.
+#' 
+#' Messina constructs single-feature threshold classifiers (see below) to separate two sample 
+#' groups, that are in a sense the most robust single-gene classifiers that satisfy
+#' user-supplied performance requirements.  It accepts as primary input a matrix or 
+#' ExpressionSet of feature data x; a vector of sample class membership y; and 
+#' minimum classifier target performance values min_sens, and min_spec.  Messina
+#' then examines each feature of x in turn, and attempts to build a threshold 
+#' classifier that satisfies the minimum performance requirements, based on that feature.
+#' The results of this classifier building and testing are then returned in a MessinaClassResult object.
+#'
+#' The features measured in x must be numeric and contain no missing values, but apart from
+#' that are unrestricted -- common use cases are mRNA measurements and protein abundance
+#' estimates.  Messina is not sensitive to the data transformation used, although for
+#' mRNA abundance measurements a log-transform or similar is suggested to aid interpretability
+#' of the results.  x containing discrete values can also be examined by Messina,
+#' though if the number of possible values of the members of x is very low, the algorithm is 
+#' unlikely to be very powerful.
+#'
+#' @section Threshold classifiers: Messina trains single-feature threshold classifiers.
+#' These are classifiers that place unknown samples into one of two groups, based on
+#' whether the sample's measurement for a given feature is above or below a constant
+#' threshold value.  They are the one-dimensional version of support vector machines
+#' (SVMs), where in this case the feature set is one-dimensional, and the 'support vector'
+#' (the threshold) is a zero-dimensional point.  Threshold classifiers are defined by two 
+#' properties: their threshold value, and their direction, which is the class assigned if 
+#' a sample's measurement exceeds the threshold.
 #' 
 #' @param x feature expression values, either supplied as an ExpressionSet, or as
 #'   an object that can be converted to a matrix by as.matrix.  In the latter case,
@@ -20,14 +50,23 @@
 #'   derived from the current state of the PRNG is used.
 #' @param progress display a progress bar tracking the computation?
 #' @param silent be completely silent (except for error and warning messages)?
+#'
 #' @return an object of class "MessinaClassResult" containing the results of the analysis.
 #'
 #' @export
 #' @seealso \code{\link{MessinaClassResult-class}}
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
+#' @seealso \code{\link{messinaDE}}
 #' @seealso \code{\link{messinaSurv}}
-# @cite Pinese:2009
+#' @references Pinese:2009 Pinese M, Scarlett CJ, Kench JG, et al. (2009)
+#'   Messina: A Novel Analysis Tool to Identify Biologically Relevant 
+#'   Molecules in Disease.  PLoS ONE 4(4): e5337.  \url{doi:10.1371/journal.pone.0005337}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#'
+#' @examples
+#' \dontrun{
+#' #TODO
+#' }
 messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL, progress = TRUE, silent = FALSE)
 {
 	if (class(x) == "ExpressionSet")
@@ -196,3 +235,69 @@ messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rpr
 {
 	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent, PACKAGE = "messina")
 }
+
+
+#' Detect differential expression in the presence of outliers
+#'
+#' Run the Messina algorithm to find differentially-expressed features (eg. genes) in
+#' the presence of outliers.
+#' 
+#' The Messina classification algorithm (see main page at \code{\link{messina}}) can be
+#' adapted to identify differentially-expressed features in a two-class setting, with 
+#' tunable resistance to outliers. This convenience function simplifies the setting of 
+#' parameters for this task.
+#'
+#' @section Outlier differential expression: Outliers in differential expression measurements are common in many experimental 
+#' contexts.  They may be due to experimental errors, sample misidentification, or
+#' the presence of unknown structure (eg. disease subtypes) in what was supposed to
+#' be a homogeneous sample group.  The latter two causes are particularly troublesome
+#' in clinical samples, where diagnoses can be incorrect, samples impure, and subtypes 
+#' common.  The effect of these outliers is to inflate within-group variance estimates,
+#' reducing the power for detecting differential expression.  Messina provides a 
+#' principled approach to detecting differential expression in datasets containing at
+#' most a specified level of outlier samples.
+#'
+#' @section Misattribution rate: In the Messina framework, for each feature each of the 
+#' two classes of samples is considered to have a typical signal level.  Most samples in 
+#' each class will display the level of signal that matches their class, but a small number 
+#' will display a level of signal consistent with the \emph{wrong} class.  We call these samples 
+#' with signal matching the wrong class 'misattributed samples'.  Messina can be tuned to 
+#' ignore a given rate of sample misattribution when detecting differential expression, and 
+#' therefore can be smoothly adjusted to deal with varying levels of outlier contamination
+#' in an experiment.
+#'
+#' messinaDE assumes that the probability of an outlier sample is equal in each of the two
+#' classes.  There are situations where this assumption is likely incorrect: for example,
+#' in a cancer vs normal comparison, the normal samples are likely to have much more 
+#' consistent expression than the highly perturbed and variable cancer samples.  In these 
+#' cases, the user can call the worker function \code{\link{messina}} directly,
+#' with min_sens and min_spec parameters set appropriately to the expected outlier rate
+#' in each class.  An example of how to calculate the required parameters is given in the 
+#' vignette.
+#'
+#' @inheritParams messina
+#' @param max_misattribution_rate The maximum allowable sample misattribution rate, in [0, 0.5).
+#'   Increasing this value will increase the algorithm's resistance to outliers, at the cost
+#'   of somewhat reduced sensitivity.  Note that for values >= 0.95, a conventional statistical
+#'   approach to identifying differential expression (eg. t-test) will likely be more powerful
+#'   than Messina.  See details and the vignette for more information on selecting this parameter.
+#'
+#' @export
+#' @seealso \code{\link{MessinaClassResult-class}}
+#' @seealso \code{\link[Biobase]{ExpressionSet}}
+#' @seealso \code{\link{messina}}
+#' @seealso \code{\link{messinaSurv}}
+#' @references Pinese:2009 Pinese M, Scarlett CJ, Kench JG, et al. (2009)
+#'   Messina: A Novel Analysis Tool to Identify Biologically Relevant 
+#'   Molecules in Disease.  PLoS ONE 4(4): e5337.  \url{doi:10.1371/journal.pone.0005337}
+#' @author Mark Pinese \email{m.pinese@@garvan.org.au}
+#'
+#' @examples
+#' \dontrun{
+#' #TODO
+#' }
+messinaDE <- function(x, y, max_misattribution_rate, f_train = 0.9, n_boot = 50, seed = NULL, progress = TRUE, silent = FALSE)
+{
+	return(messina(x = x, y = y, min_sens = 1 - max_misattribution_rate, min_spec = 1 - max_misattribution_rate, f_train = f_train, n_boot = n_boot, seed = seed, progress = progress, silent = silent))
+}
+
