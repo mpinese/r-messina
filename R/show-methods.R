@@ -1,11 +1,18 @@
-#' TODO
+#' Generic show methods for Messina objects.
+#'
+#' Generic show methods for Messina objects.
 #' 
-#' TODO
+#' For details of the objects and their generation, see the relevant class documentation,
+#' and entries for the main functions \code{\link{messina}}, \code{\link{messinaDE}}, and 
+#' \code{\link{messinaSurv}}, 
 #' 
 #' @export
 #' @seealso \code{\link{MessinaResult-class}}
-#' @seealso \code{\link{messinaSurv}}
+#' @seealso \code{\link{MessinaParameters-class}}
+#' @seealso \code{\link{MessinaFits-class}}
 #' @seealso \code{\link{messina}}
+#' @seealso \code{\link{messinaDE}}
+#' @seealso \code{\link{messinaSurv}}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #' @rdname show-methods
 setMethod("show", signature = "MessinaResult", definition = function(object) 

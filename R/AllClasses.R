@@ -2,14 +2,15 @@ setOldClass("Surv")
 
 setClassUnion("MessinaY", c("Surv", "vector"))
 
+#' The MessinaParameters class
+#'
 #' A class to store the parameters supplied to a messina or messinaSurv analysis.
 #'
 #' @slot x a matrix of expression values supplied to the messina or messinaSurv
 #'   functions.  Features are in rows, samples in columns.
 #' @slot y either a vector of class membership indicators (0/1 or TRUE/FALSE), for
 #'   the messina case, or a Surv object for the messinaSurv case.  In either case,
-#'   the length of y is equal to the number of columns of x, and each entry of y
-#'   should match the corresponding sample column of x.
+#'   each entry of y should match the corresponding sample column of x.
 #' @slot features a character vector of feature ids, matching the rows of x.
 #' @slot samples a character vector of sample ids, matching the columns of x and 
 #'   entries of y.
@@ -40,17 +41,19 @@ setClassUnion("MessinaY", c("Surv", "vector"))
 											num_bootstraps = "integer",
 											prng_seed = "integer"))
 											
+#' The MessinaFits class
+#' 
 #' A class to store the individual messina or messinaSurv fits to a
 #' dataset.
 #'
 #' @slot summary a data frame containing summary performance measures
-#'   for each feature, features in rows.  The user-relevant columns are:
+#'   for each feature, with features in rows.  The user-relevant columns are:
 #'     \describe{
-#'       \item{passed}{did this feature pass the user requirements?  A boolean.}
-#'       \item{type}{the type of classifier that was fit}
-#'       \item{threshold}{the threshold expression value of the classifier}
-#'       \item{posk}{the direction of the classifier}
-#'       \item{margin}{the expression margin of the classifier}
+#'       \item{"passed"}{did this feature pass the user requirements?  A boolean.}
+#'       \item{"type"}{the type of classifier that was fit}
+#'       \item{"threshold"}{the threshold expression value of the classifier}
+#'       \item{"posk"}{the direction of the classifier}
+#'       \item{"margin"}{the expression margin of the classifier}
 #'     }
 #' @slot objective_surfaces a list of length equal to the number of features.
 #'   each list entry contains a data frame of the objective function values
@@ -68,12 +71,15 @@ setClassUnion("MessinaY", c("Surv", "vector"))
 						slots = c(	summary = "data.frame",					# columns: passed, type, threshold, posk, margin, ptrue, psuccessful
 									objective_surfaces = "list"))			# list of data.frames, each with columns: cutoff, objective (MessinaSurvResult), or cutoff, sensitivity, specificity (MessinaClassResult)
 
+
+#' The MessinaResult class
+#' 
 #' A class to store the results of a messina or messinaSurv analysis.
 #'
-#' @slot problem_type The variant of the messina algorithm used, either
-#'   "classification" for the classification case (fit using the function
-#'   messina, or "survival" for the outcome case (fit using the function
-#'   messinaSurv).
+#' @slot problem_type A character string naming the variant of the messina 
+#'   algorithm used, either "classification" for the classification case 
+#'   (fit using the function messina), or "survival" for the outcome case 
+#'   (fit using the function messinaSurv).
 #' @slot parameters An object of class MessinaParameters, containing
 #'   input data and parameters for the algorithm.
 #' @slot perf_estimates A data frame of summary performance estimates
