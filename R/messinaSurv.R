@@ -1,12 +1,48 @@
-#' Find optimal prognostic features using the Messina algorithm.
-#'
+#' Find optimal prognostic features using the Messina algorithm
+#' 
 #' Run the MessinaSurv algorithm to find features (eg. genes) that can define groups
 #' of patients with very different survival times.
 #' 
-#' TODO
+#' The MessinaSurv algorithm aims to identify features for which patients with high signal
+#' and patients with low signal have very different survival outcomes.  This is achieved by 
+#' definining an objective function which assigns a numerical value to how strongly the 
+#' survival in two groups of patients differs, then assessing the value of this objective
+#' at different signal levels of each feature.  Those features for which, at a given signal
+#' level, the objective function is consistently above a user-supplied minimum level, are
+#' selected by MessinaSurv as being single-feature survival predictors.
 #' 
-#' @section Objective functions: MessinaSurv aims to find those features that can 
-#'   robustly separate patients into long- and short-survivor groups
+#' MessinaSurv has applications as an algorithm to identify features that are survival-related,
+#' as well as a principled method to identify threshold signal values to separate a cohort into
+#' poor- and good-prognosis subgroups.  It can also be used as a feature filter, selecting and
+#' discretising survival-related features before they are input into a multivariate predictor.
+#' 
+#' @section Objective functions: MessinaSurv uses the value of its objective function as a
+#'   measure of the strength of the difference in survival of the two patient groups 
+#'   defined by the threshold.  Three objective functions are currently defined:
+#'   \describe{
+#'     \item{"coxcoef"}{The coefficient of a Cox proportional hazards fit to the model Surv ~ I(x > T),
+#'     where x is the feature signal level, and T is the threshold being tested.  Range is (-inf, inf),
+#'     with a no-information value of 0;
+#'     positive values indicate that the subgroup defined by signal above the threshold fails sooner.}
+#'     \item{"tau"}{Kendall's tau for survival data, defined as (concordant + tied/2) / (concordant + discordant + tied),
+#'       where concordant is the number of concordant group/survival pairs, discordant is
+#'       the number of discordant group/survival pairs, and tied is the total number of tied pairs,
+#'       counting both group and survival ties.  Concordance is calculated expecting that
+#'       samples with signal exceeding the threshold will fail sooner.  Range is [0, 1], with
+#'       a no-information value of 0.5.  Note that the ties terms naturally penalize very high or low 
+#'       thresholds, and so this objective is inappropriate if somewhat unbalanced subgroups are expected 
+#'       to be present in the data.}
+#'     \item{"reltau"}{tau, normalized to remove the ties penalty.  Defined as agree / (agree + disagree).
+#'       Range is [0, 1], with a no-information value of 0.5.  Although the ties penalty of tau
+#'       is removed, and this method is thus suitable for finding unbalanced subgroups, it is
+#'       now unstable at extreme threshold values (as in these cases, agree + disagree -> 0).
+#'       For this reason, min_group_frac must be set to a modest value when using "reltau", to preserve stability. }
+#'   }
+#'   Methods "coxcoef" and "reltau" show instability for very high and low threshold values,
+#'   and so should be used with an appropriate value of min_group_frac for stable fits.  Method
+#'   "tau" is stable to extreme threshold values, and therefore will tolerate min_group_frac = 0,
+#'   however note that "tau" naturally penalizes small subgroups, and is therefore a poor
+#'   choice unless you wish to find approximately equal-sized subgroups.
 #' 
 #' @section Minimum group fraction: The parameter min_group_frac limits the size of
 #'   the smallest subgroups that messinaSurv can select.  As the groups become smaller,
@@ -47,16 +83,16 @@
 #'   default, parallel mode is used if the doMC library is loaded, and more than one
 #'   core has been registered with registerDoMC().  Note that no progress bar is
 #'   displayed in parallel mode.
-#'
+#' 
 #' @return an object of class "MessinaSurvResult" containing the results of the analysis.
-#'
+#' 
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messina}}
 #' @seealso \code{\link{messinaDE}}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
-#'
+#' 
 #' @examples
 #' \dontrun{
 #' #TODO

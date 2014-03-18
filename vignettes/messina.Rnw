@@ -1,6 +1,6 @@
 %\VignetteEngine{knitr::knitr}
 %\VignetteIndexEntry{Using Messina}
-%\VignetteDepends{messina,leukemiasEset}
+%\VignetteDepends{messina,antiProfilesData}
 %\VignetteKeywords{messina,messinaSurv}
 %\VignettePackage{messina}
 
@@ -23,6 +23,7 @@ library(knitr)
 
 \tableofcontents
 
+
 \section{Introduction}
 
 Messina is a package of algorithms for generating optimal single-gene
@@ -43,113 +44,138 @@ reflective of underlying, and undiscovered, sample subtypes.
 The original Messina algorithm for classification and differential
 expression analysis is described in the Messina paper \cite{Pinese:2009}.
 
-\section{Finding genes that optimally distinguish between sample groups}
 
-To demonstrate the use of Messina in constructing single-gene
-classifiers to distinguish between two sample groups, we use the MILE
-leukemia expression dataset in Bioconductor package \Biocexptpkg{leukemiasEset}:
+\section{Using Messina to construct optimal diagnostic classifiers}
+
+This section will illustrate how Messina can be used to identify single features
+(eg genes) that would be best suited to form the basis of a diagnostic test.
+
+\subsection{The problem}
+Translating gene expression data into a robust clinical test is challenging:
+\begin{enumerate}
+  \item{Although gene expression datasets typically measure the levels of many thousands
+    of genes, practical clinical diagnostic tests only measure a very small number of
+    markers (typically just one).}
+  \item{High-throughput gene expression data and clinical tests use very different 
+    measurement methods, so that a finding in one is not necessarily repeatable in the other.}
+  \item{Clinical samples are subject to much more varied handling than experimental
+    samples, requiring clinical tests to be very robust to handling variations.}
+\end{enumerate}
+Point (1) above means that although sophisticated classification algorithms can produce
+high-performance multi-feature classifiers on gene expression data, these classifiers
+are not translatable to a clinical test.  Special classifiers developed to work with
+very small numbers of genes are required.  Points (2) and (3) reflect that, in the translation
+of a laboratory result to a clinical diagnostic context, maximum robustness is desirable
+to give the test the best chance of performing satisfactorily in the less controlled
+clinical environment, using completely different measurement methods.
+
+Conventional classifiers (eg. SVM, kNN) are poorly suited to the problem of generating
+diagnostic tests, as they do not strongly control for the number of features used in the
+classifier.  Statistical tests (eg. t-test) work on a per-feature basis, but are not
+specifically designed for classification problems, and so do not produce optimally robust
+tests.  Messina was specifically designed to solve this problem of generating optimal 
+single-gene classifiers.
+
+\subsection{Example: Designing a colon cancer screening test}
+
+We use as an example the problem of distinguishing between colon biopsies of non-neoplastic
+tissue, and those containing colon cancer.  In this example, we are ultimately interested 
+in developing a screening test.  Therefore, the per-test cost should be low, and ideally
+the test should be so robust that it may also work in samples more conveniently accessed
+than tissue biopsies, such as peripheral blood.  Additionally, as the test will be a screen,
+we require that the sensitivity of the test be high, although we are willing to accept a
+lower specificity if it will gain us additional robustness.
+
+We use the colon cancer expression dataset available in Bioconductor package
+\Biocexptpkg{antiProfiles}.  This dataset has already been used to produce a high-performing
+diagnostic classifier, but it is based on the measurements of 542 Affymetrix probesets,
+and so would not be economical to use in the screening application we have in mind, as
+well as quite challenging to transfer between sites and technologies.
+
+We start by loading Messina and the data.
 <<class-load-libs, message=FALSE>>=
 library(messina)
-library(leukemiasEset)
-data(leukemiasEset)
+library(antiProfilesData)
+data(apColonData)
+apColonData
 @
 
-We will compare ALL samples to healthy bone marrow samples. We start by
-extracting the expression and sample type data, and subsetting to just
-ALL and NoL (normal bone marrow) samples:
-<<class-prepare-data>>=
-sample_type = pData(leukemiasEset)$LeukemiaType
-expression_matrix = exprs(leukemiasEset)
-normal_or_all = sample_type %in% c("NoL", "ALL")
-sample_type = sample_type[normal_or_all]
-expression_matrix = expression_matrix[,normal_or_all]
+The data contain a number of different sample classes.  For our purposes we are only
+interested in comparing tumour and normal samples.  We extract the expression data and class
+labels, and subset to just these types of interest.  Messina does not require gene filtering, 
+so we do not perform it at this stage, although in very large datasets this may be useful 
+to reduce runtimes. 
+<< >>=
+x = exprs(apColonData)
+y = pData(apColonData)$SubType
+
+sel = y %in% c("normal", "tumor")
+x = x[,sel]
+y = y[sel]
 @
 
-The expression matrix and sample type vectors now contain only data for
-ALL or normal bone marrow samples.
-<<class_show_data>>=
-dim(expression_matrix)
-sample_type
-head(expression_matrix, 3)
+We are now ready to run the Messina algorithm.  As we are interested in a screening test,
+we desire a high test sensitivity, but are willing to accept a lower test specificity.
+We choose a minimum sensitivity requirement of 0.95, and a minimum specificity requirement
+of 0.85.  We now calculate the Messina fits, specifying that the "positive" class is 
+tumour.
+<< >>=
+fit.apColon = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85, seed = 1234, progress = FALSE)
 @
 
-Messina does not require gene filtering, so we do not perform it at this
-stage, although in very large datasets this may be useful to reduce
-runtimes. Simulation studies have indicated that Messina's
-false-discovery rate is acceptably low (\textless{} 10\%) under most
-conditions, so filtering is not necessary for FDR control \cite{Pinese:2009}.
-
-We now create a binary variable indicating whether a given sample is ALL
-or not, then run Messina. We start with stringent parameters (minimum
-sensitivity and specificity both 95\%) to yield classifiers with high
-performance, but possibly reduced robustness to noise. Note that Messina
-works best with more relaxed parameters than these; and in this case the
-function warns that the user is probably better off using a classical
-statistical test.
-
-<<class_fit_1>>=
-sample_is_all = sample_type == "ALL"
-messina_fit_1 = messina(expression_matrix, sample_is_all, min_sens = 0.95, 
-	min_spec = 0.95, seed = 1234, progress = FALSE)
+The result is a messinaClassResult S4 object with overloaded show and plot functions.
+<< >>=
+fit.apColon
 @
 
-The result of the messina call is a MessinaClassResult object, and we
-can see some summary information about the run just by printing the
-variable:
+Here we see that Messina found \Sexpr{sum(fit.apColon@fits@summary$passed)} probesets
+that were suitable as the basis of threshold diagnostic classifiers for colon cancer.
+A summary of the best probesets (by margin) is given at the bottom of the show results.  This can 
+also be accessed directly, with more display options, using the messinaTopResults function.
 
-<<class_display_1>>=
-messina_fit_1
+By default, Messina ranks features in decreasing order
+of their \emph{margin}, a concept borrowed from support vector machine theory.  
+The margin is a measure of how robust the classifier is to
+noise, and is equal to the distance between the performance limits of the threshold
+value.  These limits are the gene expression values beyond which the threshold cannot
+pass without the classifier no longer satisfying its user-supplied minimum performance
+requirements.  The distance between the threshold and either limit is an indication of
+how much error must be present in a gene expression measurement for the performance
+guarantee of a Messina classifier to be violated.  The greater the margin, the more
+robust the classifier.
+
+To illustrate the performance limits, threshold, and margin concepts, we plot the 
+Messina fit of the best probeset found.  We override the Messina default and set
+the plot type to ``point'' (vs the default of ``bar''), as the data are approximately log transformed.
+<< >>=
+plot(fit.apColon, i = 1, plot_type = "point")
 @
 
-To see the top hits of the algorithm, we use the plot function,
-specifying that we wish the two best features (by margin size) to be
-displayed:
+This plot displays the expression of each sample as a coloured point, with the colour
+reflecting the sample's group: 0 for non-neoplastic tissue, and 1 for cancer.  The
+threshold that Messina selected as being optimal for separating cancer from normal is
+denoted by a solid black line, and on either side the dotted lines represent the 
+performance limits of the classifier.  If the level of error in expression measurement
+remains less than the distance between either dotted line and the threshold, the 
+classifier's minimum sensitivity and specificity requirements will be satisfied.  The
+distance between the two dotted lines is the margin.
 
-<<class_plot_1_point>>=
-messinaTopResults(messina_fit_1, n = 20)
-plot(messina_fit_1, i = 1:2)
-@
+In this example, the top probe found by Messina could perfectly separate cancer and
+normal samples, with a very wide margin of approximately 7 units, or about 120-fold.
 
-In each of these plots, samples are in rows, with each sample's
-expression and class represented by the location and colour of the
-sample's point, respectively. The optimal classifier threshold value is
-shown by a solid line, and the classifier margin by dotted lines.
-
-Messina has an alternative plotting mode that some users may find more
-natural:
-
-<<class_plot_1_bar>>=
-plot(messina_fit_1, i = 1, plot_type = "bar")
-@
-
-Messina's strength is that it can be tuned to find more noise-robust
-classifiers, by relaxing its performance requirements. If we are willing
-to accept a reduced specificity in ALL diagnosis (ie. some normal
-samples will be called as ALL), in return for robustness to assay
-variations, we can run Messina with altered parameters:
-
-<<class_fit_2>>=
-messina_fit_2 = messina(expression_matrix, sample_is_all, min_sens = 0.95, 
-	min_spec = 0.6, seed = 1234, progress = FALSE)
-messina_fit_2
-@
-
-The classifiers now found by Messina have wider margins, and therefore
-are more robust to noise and experimental or technical variations, but
-as a trade-off are more likely to report false positives when detecting
-ALL.
-
-<<class_plot_2>>=
-plot(messina_fit_2, i = 1:10)
-@
-
-By varying the minimum sensitivity and specificity requirements, Messina
-permits flexible tuning of the classifiers' performance to suit
-different requirements.
 
 \section{Detecting differential expression in the presence of outliers}
 
 TODO
+Simulation studies have indicated that Messina's
+false-discovery rate is acceptably low (\textless{} 10\%) under most
+conditions, so filtering is not necessary for FDR control \cite{Pinese:2009}.
+
+<<de-load-libs, message=FALSE>>=
+#library(messina)
+#library(leukemiasEset)
+#data(leukemiasEset)
+@
 
 To illustrate the power of Messina to detect differential expression in
 the presence of sample heterogeneity and outliers, we compare it to a
@@ -162,28 +188,28 @@ starting point for differential expression analysis, but can be varied
 according to the desired robustness to outliers.
 
 <<de_fit_messina>>=
-messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, 
-	min_spec = 0.7, seed = 1234, progress = FALSE)
-messina_fit_diffexp
+#messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, 
+#	min_spec = 0.7, seed = 1234, progress = FALSE)
+#messina_fit_diffexp
 @
 
 We then perform a basic T-test against each feature.
 
 <<de_fit_ttest>>=
-ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) 
-	t.test(xvals ~ sample_is_all)$p.value)
-ttest_fit_diffexp_pvalues_bh = p.adjust(ttest_fit_diffexp_pvalues, "BH")
+#ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) 
+#	t.test(xvals ~ sample_is_all)$p.value)
+#ttest_fit_diffexp_pvalues_bh = p.adjust(ttest_fit_diffexp_pvalues, "BH")
 @
 
 We plot the results to compare them. For this example, we'll call
 features with corrected P-values less than 0.01 detected by the T-test,
 and features with margins of at least 1 detected by Messina.
 <<de_messina_vs_ttest>>=
-plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", 
-	xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
-abline(h = 0.01)
-abline(v = 1)
-table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$margin >= 1)
+#plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", 
+#	xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
+#abline(h = 0.01)
+#abline(v = 1)
+#table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$margin >= 1)
 @
 
 \section{Identifying the best features to predict survival outcome}
