@@ -17,7 +17,7 @@ Depends:
     methods
 Suggests:
     knitr (>= 1.5),
-    leukemiasEset (>= 0.99.4),
+    antiProfilesData (>= 0.99.2),
     Biobase (>= 2.22.0),
     BiocStyle
 LinkingTo: Rcpp

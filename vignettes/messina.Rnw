@@ -14,6 +14,7 @@ BiocStyle::latex()
 
 <<setup, include=FALSE, cache=FALSE>>=
 library(knitr)
+opts_chunk$set(out.width="0.7\\maxwidth",fig.align="center")
 @
 
 \title{Using Messina}
@@ -93,7 +94,7 @@ and so would not be economical to use in the screening application we have in mi
 well as quite challenging to transfer between sites and technologies.
 
 We start by loading Messina and the data.
-<<class-load-libs, message=FALSE>>=
+<<class-loadlibs, message=FALSE>>=
 library(messina)
 library(antiProfilesData)
 data(apColonData)
@@ -105,7 +106,7 @@ interested in comparing tumour and normal samples.  We extract the expression da
 labels, and subset to just these types of interest.  Messina does not require gene filtering, 
 so we do not perform it at this stage, although in very large datasets this may be useful 
 to reduce runtimes. 
-<< >>=
+<<class-prepdata>>=
 x = exprs(apColonData)
 y = pData(apColonData)$SubType
 
@@ -119,12 +120,12 @@ we desire a high test sensitivity, but are willing to accept a lower test specif
 We choose a minimum sensitivity requirement of 0.95, and a minimum specificity requirement
 of 0.85.  We now calculate the Messina fits, specifying that the "positive" class is 
 tumour.
-<< >>=
-fit.apColon = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85, seed = 1234, progress = FALSE)
+<<class-fit>>=
+fit.apColon = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85, seed = 1234, silent = TRUE)
 @
 
 The result is a messinaClassResult S4 object with overloaded show and plot functions.
-<< >>=
+<<class-show>>=
 fit.apColon
 @
 
@@ -147,7 +148,7 @@ robust the classifier.
 To illustrate the performance limits, threshold, and margin concepts, we plot the 
 Messina fit of the best probeset found.  We override the Messina default and set
 the plot type to ``point'' (vs the default of ``bar''), as the data are approximately log transformed.
-<< >>=
+<<class-plot>>=
 plot(fit.apColon, i = 1, plot_type = "point")
 @
 
@@ -161,8 +162,39 @@ classifier's minimum sensitivity and specificity requirements will be satisfied.
 distance between the two dotted lines is the margin.
 
 In this example, the top probe found by Messina could perfectly separate cancer and
-normal samples, with a very wide margin of approximately 7 units, or about 120-fold.
+normal samples, with a very wide margin of approximately \Sexpr{round(max(fit.apColon@fits@summary$margin, na.rm = TRUE), 1)} units, or about \Sexpr{round(2^max(fit.apColon@fits@summary$margin, na.rm = TRUE)/10, 0)*10}-fold.
+As we move down the list of Messina results, the separation between cancer and normal
+samples progressively worsens, and the probesets become less suitable for devleopment into a diagnostic.  
+In this way, Messina provides a principled ranking of probesets to use as leads
+for the development of a diagnostic test, reporting the most robust leads first.
 
+<<class-ranked-plots,out.width="0.4\\maxwidth",fig.show="hold">>=
+plot(fit.apColon, i = c(1,2,10,50), plot_type = "point")
+@
+
+\iffalse
+\subsubsection{Comparison of Messina result with a conventional statistical test}
+
+To compare Messina to a more traditional approach, we repeat the above analysis to find colon cancer diagnostic probesets, this time using
+a t-test to rank lead probesets.
+
+<<class-trank>>=
+tstat.apColon = apply(x, 1, function(probeset_exprs) t.test(probeset_exprs[y == "normal"], probeset_exprs[y == "tumor"])$statistic)
+trank.apColon = rank(-abs(tstat.apColon), ties.method = "first")
+tbestfeature.apColon = rownames(x)[which(trank.apColon == 1)]
+tbestfeature.apColon
+@
+
+The top probeset by a t-test is \Sexpr{tbestfeature.apColon}.  We can 
+look at how Messina ranked this feature, and get the Messina functions to plot this
+feature's threshold classifier.
+<<class-tbest-show>>
+dummy = capture.output(fit.apColon.topresults <- messinaTopResults(fit.apColon))
+fit.apColon.topresults[c(1,tbestfeature.apColon),]
+plot(fit.apColon, i = 1, sort_feature == TRUE, plot_type = "point")
+plot(fit.apColon, i = which(trank.apColon == 1), sort_features = FALSE, plot_type = "point")
+@
+\fi
 
 \section{Detecting differential expression in the presence of outliers}
 
