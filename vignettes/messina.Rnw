@@ -266,7 +266,7 @@ in this dataset -- this very small number was chosen only to ensure that the vig
 executed quickly.  In practice, many thousands of genes may be assayed, and multiprocessing
 will be absolutely necessary.
 <<surv-fit>>=
-fit.surv = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE)
+fit.surv = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE, silent = TRUE)
 
 fit.surv
 @
