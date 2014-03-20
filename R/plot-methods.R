@@ -15,23 +15,24 @@
 #' and margin locations.  Two different types of plots can be produced.  See the vignette for
 #' examples.
 #'
-# @usage plot(object, indices = c(1), sort_features = TRUE, plot_type = "bar", ...)
-#'
-#' @param object the result of a Messina analysis, as returned by functions \code{\link{messina}}
+#' @param x the result of a Messina analysis, as returned by functions \code{\link{messina}}
 #'   or \code{\link{messinaDE}}.
-#' @param indices a vector of indices of features to plot.  If sort_features == FALSE, the indices
-#'   are into the unsorted features, as originally supplied in x supplied to messina or messinaDE.
-#'   If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
-#'   the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
-#'   the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
-#'   the second best classifier margin will be plotted.
-#' @param sort_features a boolean indicating whether to sort features by decreasing margin size
-#'   before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
-#'   more details see the description of that parameter.
-#' @param plot_type a string giving the type of plot to produce, either "point" or "bar".  "bar"
-#'   is the default, and shows expression levels as horizontal bars.  Although this representation
-#'   is familiar, it can be misleading in the case of log-transformed data.  In that case, the 
-#'   "point" plot type is preferable.
+#' @param ... additional options to control the plot:
+#'   \describe{
+#'     \item{\code{indices}}{a vector of indices of features to plot.  If sort_features == FALSE, the indices
+#'       are into the unsorted features, as originally supplied in x supplied to messina or messinaDE.
+#'       If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
+#'       the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
+#'       the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
+#'       the second best classifier margin will be plotted.}
+#'     \item{\code{sort_features}}{a boolean indicating whether to sort features by decreasing margin size
+#'       before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
+#'       more details see the description of that parameter.}
+#'     \item{\code{plot_type}}{a string giving the type of plot to produce, either "point" or "bar".  "bar"
+#'       is the default, and shows expression levels as horizontal bars.  Although this representation
+#'       is familiar, it can be misleading in the case of log-transformed data.  In that case, the 
+#'       "point" plot type is preferable.}
+#'   }
 #' 
 #' @aliases plot,MessinaClassResult-method
 #' @aliases plot,MessinaClassResult,missing-method
@@ -99,34 +100,34 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' multiprocessing to speed calculations if doMC is loaded and more than one core registered for use.
 #' For examples of the plots and their interpretation, see the vignette.
 #'
-# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = NULL, ...)
-#'
-# @inheritParams plot,MessinaClassResult,missing-method
-#' @param object the result of a Messina analysis, as returned by functions \code{\link{messina}}
-#'   or \code{\link{messinaDE}}.
-#' @param indices a vector of indices of features to plot.  If sort_features == FALSE, the indices
-#'   are into the unsorted features, as originally supplied in x supplied to messina or messinaDE.
-#'   If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
-#'   the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
-#'   the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
-#'   the second best classifier margin will be plotted.
-#' @param sort_features a boolean indicating whether to sort features by decreasing margin size
-#'   before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
-#'   more details see the description of that parameter.
-#' @param bootstrap_type a string giving the type of bootstrap error band to produce on the survival prediction
-#'   plots.  Can take three values: "none", "stdev", and "ci".  "none", the default, plots no error bands.
-#'   "stdev" performs multiple rounds of Kaplan-Meier curve estimation on bootstrap samples,
-#'   and plots prediction bands corresponding to +/- 1 bootstrap standard deviation from the mean.  "ci"
-#'   performs bootstrapping as per "stdev", and plots prediction bands corresponding to the bootstrap_ci
-#'   intervals.
-#' @param bootstrap_ci a value in (0.5, 1) giving the confidence interval for bootstrap_type == "ci".  
-#'   Ignored otherwise.  Default 0.9 for 90\% confidence intervals.
-#' @param nboot the number of bootstrap iterations to perform for calculations.  Set to a reasonable default
-#'   taking into account bootstrap_type and bootstrap_ci, so ordinarily does not need to be specified by
-#'   the user.
-#' @param parallel a logical indicating whether multiprocessing using doMC should be used for the bootstrap
-#'   calculations.  If NULL, multiprocessing will be used if doMC is loaded and more than one parallel
-#'   worker is registered.
+#' @param x the result of a Messina survival analysis, as returned by 
+#'   \code{\link{messinaSurv}}.
+#' @param ... additional options to control the plot:
+#'   \describe{
+#'     \item{\code{indices}}{a vector of indices of features to plot.  If sort_features == FALSE, the indices
+#'       are into the unsorted features, as originally supplied in x supplied to messinaSurv.
+#'       If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
+#'       the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
+#'       the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
+#'       the second best classifier margin will be plotted.}
+#'     \item{\code{sort_features}}{a boolean indicating whether to sort features by decreasing margin size
+#'       before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
+#'       more details see the description of that parameter.}
+#'     \item{\code{bootstrap_type}}{a string giving the type of bootstrap error band to produce on the survival prediction
+#'       plots.  Can take three values: "none", "stdev", and "ci".  "none", the default, plots no error bands.
+#'       "stdev" performs multiple rounds of Kaplan-Meier curve estimation on bootstrap samples,
+#'       and plots prediction bands corresponding to +/- 1 bootstrap standard deviation from the mean.  "ci"
+#'       performs bootstrapping as per "stdev", and plots prediction bands corresponding to the bootstrap_ci
+#'       intervals.}
+#'     \item{\code{bootstrap_ci}}{a value in (0.5, 1) giving the confidence interval for bootstrap_type == "ci".  
+#'       Ignored otherwise.  Default 0.9 for 90\% confidence intervals.}
+#'     \item{\code{nboot}}{the number of bootstrap iterations to perform for calculations.  Set to a reasonable default
+#'       taking into account bootstrap_type and bootstrap_ci, so ordinarily does not need to be specified by
+#'       the user.}
+#'     \item{\code{parallel}}{a logical indicating whether multiprocessing using doMC should be used for the bootstrap
+#'       calculations.  If NULL, multiprocessing will be used if doMC is loaded and more than one parallel
+#'       worker is registered.}
+#'   }
 #' 
 #' @aliases plot,MessinaSurvResult-method
 #' @aliases plot,MessinaSurvResult,missing-method
@@ -237,6 +238,7 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 
 #' @import ggplot2
 #' @importFrom grid grid.newpage viewport pushViewport popViewport grid.layout
+#' @import foreach
 messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = NULL)
 {
 	if (!(bootstrap_type %in% c("none", "ci", "stdev")))
@@ -256,9 +258,9 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 
 	if (is.null(parallel))
 	{
-		if (("doMC" %in% .packages()) && require(foreach))
+		if ("doMC" %in% .packages())
 		{
-			parallel = foreach::getDoParWorkers() > 1
+			parallel = getDoParWorkers() > 1
 		}
 		else
 		{

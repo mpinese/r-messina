@@ -6,6 +6,7 @@
 # License v1.0, available at:
 # https://www.eclipse.org/org/documents/epl-v10.html
 
+#' @import graphics
 if (!isGeneric("plot"))
 {
 	setGeneric("plot", function(x, y, ...) standardGeneric("plot"))

@@ -97,6 +97,7 @@
 #' @return an object of class "MessinaSurvResult" containing the results of the analysis.
 #' 
 #' @importFrom plyr aaply llply
+#' @import foreach
 #'
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
@@ -125,9 +126,9 @@ messinaSurv = function(x, y, obj_min, obj_func, min_group_frac = 0.1, f_train = 
 	
 	if (is.null(parallel))
 	{
-		if (("doMC" %in% .packages()) && require(foreach))
+		if ("doMC" %in% .packages())
 		{
-			parallel = foreach::getDoParWorkers() > 1
+			parallel = getDoParWorkers() > 1
 		}
 		else
 		{

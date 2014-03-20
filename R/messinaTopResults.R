@@ -10,7 +10,8 @@
 #' Display a summary of the top results from a Messina analysis
 #' 
 #' Sorts the summary results of a Messina analysis in decreasing order of classifier margin,
-#' and displays the top n.  The full sorted data.frame is invisibly returned.
+#' and displays the top n.  The full sorted data.frame is invisibly returned.  If n == 0,
+#' displays nothing, but still invisibly returns the full data.frame.
 #'
 #' The displayed data.frame has the following columns.  Users are encouraged to consult the vignette
 #' for a tutorial on how to interpret these results for classification and gene expression tasks.
@@ -55,7 +56,8 @@
 #' }
 #'
 #' @param result the result returned by a call to messina, messinaDE, or messinaSurv.
-#' @param n the maximum number of top hits to display (default 10).
+#' @param n the maximum number of top hits to display (default 10).  If zero, no results
+#'   are displayed, but the full data.frame of results is still returned.
 #'
 #' @return (invisible) the full table of hits, as a data.frame sorted in order 
 #'   of decreasing margin.
@@ -117,6 +119,9 @@ messinaTopResults = function(result, n = 10)
 	summary = summary[,c("passed", "type", "threshold", "posk", "margin")]
 	summary$posk = c(-1, 1)[summary$posk + 1]
 	colnames(summary) = c("Passed Requirements", "Classifier Type", "Threshold Value", "Direction", "Margin")
-	print(summary[1:n,])
+	if (n != 0)
+	{
+		print(summary[1:n,])
+	}
 	invisible(summary)
 }
