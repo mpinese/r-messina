@@ -2,10 +2,10 @@ Package: messina
 Type: Package
 Title: Single-gene classifiers and outlier-resistant detection of differential
     expression for two-group and survival problems.
-Version: 0.99.0
+Version: 0.99.1
 Date: 2014-03-19
-Authors@R: person("Mark", "Pinese", email = "m.pinese@garvan.org.au", role =
-    list("aut", "cre", "cph"))
+Authors@R: c(person(given = "Mark", family = "Pinese", role = c("aut", "cre",
+    "cph"), email = "m.pinese@garvan.org.au"))
 Description: Messina is a collection of algorithms for constructing optimally
     robust single-gene classifiers, and for identifying differential expression
     in the presence of outliers or unknown sample subgroups.  The methods have

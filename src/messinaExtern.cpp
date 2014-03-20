@@ -42,6 +42,14 @@ extern "C"
 	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rprogress, SEXP Rsilent);
 }
 
+
+// Native routine registration ///////////////////////////////////////////////////////////////
+//R_CallMethodDef callMethods[] = {
+//	{"messinaCextern", (DL_FUNC) &messinaCextern, 8},
+//	{NULL, NULL, 0}
+//};
+
+
 // Internal function declarations ////////////////////////////////////////////////////////////
 STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data);
 SEXP convertResults2R(Result *results, uint32_t n_results);
@@ -84,7 +92,6 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 	Data data;
 	Result *results;
 	Classifier classifier;
-	FILE *out;
 	
 	if ((err = convertRMatrix2Data(x, cls, data)) != OK)
 	{
@@ -176,7 +183,7 @@ SEXP convertResults2R(Result *results, uint32_t n_results)
 	R_len_t i;
 	Result *this_result;
 	
-	for (i = 0; i < n_results; i++)
+	for (i = 0; i < static_cast<R_len_t>(n_results); i++)
 	{
 		this_result = results + i;
 		

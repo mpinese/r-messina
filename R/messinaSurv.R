@@ -88,8 +88,8 @@
 #' @param n_boot the number of bootstrap rounds to use.
 #' @param seed an optional random seed for the analysis.  If NULL, the R PRNG is used
 #'   as-is.
-#' @param parallel should calculations be parallelized using the doMC framework?  By
-#'   default, parallel mode is used if the doMC library is loaded, and more than one
+#' @param parallel should calculations be parallelized using the doMC framework?  If NULL, 
+#'   parallel mode is used if the doMC library is loaded, and more than one
 #'   core has been registered with registerDoMC().  Note that no progress bar is
 #'   displayed in parallel mode.
 #' @param silent be completely silent (except for error and warning messages)?
@@ -106,7 +106,6 @@
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #' 
 #' @examples
-#' \dontrun{
 #' ## Load a subset of the TCGA renal clear cell carcinoma data
 #' ## as an example.
 #' data(tcga_kirc_example)
@@ -120,10 +119,21 @@
 #'
 #' fit
 #' plot(fit)
-#' }
-messinaSurv = function(x, y, obj_min, obj_func, min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1), silent = FALSE)
+messinaSurv = function(x, y, obj_min, obj_func, min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = NULL, silent = FALSE)
 {
 	stopifnot(class(y) == "Surv")
+	
+	if (is.null(parallel))
+	{
+		if ("doMC" %in% .packages())
+		{
+			parallel = (getDoParWorkers() > 1)
+		}
+		else
+		{
+			parallel = FALSE
+		}
+	}
 
 	if (class(x) == "ExpressionSet")
 	{

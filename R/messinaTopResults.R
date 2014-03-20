@@ -60,6 +60,7 @@
 #' @return (invisible) the full table of hits, as a data.frame sorted in order 
 #'   of decreasing margin.
 #'
+#' @importFrom methods is
 #' @export
 #'
 #' @seealso \code{\link{messina}}
