@@ -125,7 +125,7 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #'   taking into account bootstrap_type and bootstrap_ci, so ordinarily does not need to be specified by
 #'   the user.
 #' @param parallel a logical indicating whether multiprocessing using doMC should be used for the bootstrap
-#'   calculations.  The default is to use multiprocessing if doMC is loaded, and more than one parallel
+#'   calculations.  If NULL, multiprocessing will be used if doMC is loaded and more than one parallel
 #'   worker is registered.
 #' 
 #' @aliases plot,MessinaSurvResult-method
@@ -183,7 +183,7 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 	
 	if (length(indices) == 0)
 	{
-		return(invisible(NULL))
+		return()
 	}
 	
 	fit_summary = object@fits@summary
@@ -235,15 +235,12 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 		
 		print(theplot)
 	}
-	
-	invisible(NULL)
 }
 
 
 #' @import ggplot2
-# @importFrom gridExtra grid.arrange
 #' @importFrom grid grid.newpage viewport pushViewport popViewport grid.layout
-messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1))
+messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = NULL)
 {
 	if (!(bootstrap_type %in% c("none", "ci", "stdev")))
 	{
@@ -260,6 +257,18 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 		warning(sprintf("Warning: Unusually low value for bootstrap_ci, %f.  Are you sure you want %.0f%% confidence intervals?  Conventionally, bootstrap_ci should be at least 0.9.\nContinuing anyway.", bootstrap_ci, bootstrap_ci*100))
 	}
 
+	if (is.null(parallel))
+	{
+		if ("doMC" %in% .packages())
+		{
+			parallel = (getDoParWorkers() > 1)
+		}
+		else
+		{
+			parallel = FALSE
+		}
+	}
+
 	nboot = as.integer(round(nboot))
 
 	n = nrow(object@parameters@x)
@@ -272,7 +281,7 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 	
 	if (length(indices) == 0)
 	{
-		return(invisible(NULL))
+		return()
 	}
 	
 	fit_summary = object@fits@summary
@@ -311,8 +320,6 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 			print(obj_plot, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
 			print(km_plot_all, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 			#popViewport(2)
-
-			#grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Failed Fit: Feature %s", feature))
 		}
 		else
 		{
@@ -332,12 +339,8 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 			print(km_plot_lower_margin, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
 			print(km_plot_upper_margin, vp = viewport(layout.pos.row = 2, layout.pos.col = 2))
 			#popViewport(4)
-			
-			#grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
 		}
 	}
-	
-	return(invisible(NULL))
 }
 
 

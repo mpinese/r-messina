@@ -35,7 +35,6 @@ setMethod("show", signature = "MessinaResult", definition = function(object)
 	cat("\n")
 	cat("Summary of results:\n")
 	show(object@fits)
-	invisible(NULL)
 })
 
 
@@ -59,8 +58,6 @@ setMethod("show", signature = "MessinaParameters", definition = function(object)
 	cat("  Training fraction: ", object@training_fraction, "\n", sep = "")
 	cat("  Number of bootstraps: ", object@num_bootstraps, "\n", sep = "")
 	cat("  Random seed: ", object@prng_seed, "\n", sep = "")
-	
-	invisible(NULL)
 })
 
 
@@ -75,6 +72,4 @@ setMethod("show", signature = "MessinaFits", definition = function(object)
 	cat("  Top features:\n")
 	
 	messinaTopResults(object, 10)
-	
-	invisible(NULL)
 })
