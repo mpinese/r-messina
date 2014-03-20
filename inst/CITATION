@@ -1,0 +1,25 @@
+citEntry(entry="Article",
+  header	= "When using Messina, please cite:",
+  title 	= "Messina: A Novel Analysis Tool to Identify Biologically Relevant Molecules in Disease",
+  volume 	= "4",
+  issn 		= "1932-6203",
+  url 		= "{http://dx.doi.org/10.1371/journal.pone.0005337}",
+  doi 		= "{10.1371/journal.pone.0005337}",
+  number 	= "4",
+  journal 	= "{PLoS ONE}",
+  publisher = "{P}ublic {L}ibrary of {S}cience {(PLoS)}",
+  author 	= "Mark Pinese and Christopher J. Scarlett and James G. Kench and Emily K. Colvin and Davendra Segara and Susan M. Henshall and Robert L. Sutherland and Andrew V. Biankin",
+  editor 	= "Hilal Lashuel",
+  year 		= "2009",
+  month 	= "Apr",
+  pages 	= "e5337",
+  textVersion = paste(
+	"Pinese M, Scarlett CJ, Kench JG, Colvin EK, Segara D, et al. (2009)",
+	"Messina: A Novel Analysis Tool to Identify Biologically Relevant Molecules in Disease.",
+	"PLoS ONE 4(4): e5337.",
+	"doi:10.1371/journal.pone.0005337"
+  )
+)
+
+citFooter("If you use this free open-source software,
+please cite the appropriate journal articles.")

@@ -172,88 +172,117 @@ for the development of a diagnostic test, reporting the most robust leads first.
 plot(fit.apColon, i = c(1,2,10,50), plot_type = "point")
 @
 
-\iffalse
-\subsubsection{Comparison of Messina result with a conventional statistical test}
-
-To compare Messina to a more traditional approach, we repeat the above analysis to find colon cancer diagnostic probesets, this time using
-a t-test to rank lead probesets.
-
-<<class-trank>>=
-tstat.apColon = apply(x, 1, function(probeset_exprs) t.test(probeset_exprs[y == "normal"], probeset_exprs[y == "tumor"])$statistic)
-trank.apColon = rank(-abs(tstat.apColon), ties.method = "first")
-tbestfeature.apColon = rownames(x)[which(trank.apColon == 1)]
-tbestfeature.apColon
-@
-
-The top probeset by a t-test is \Sexpr{tbestfeature.apColon}.  We can 
-look at how Messina ranked this feature, and get the Messina functions to plot this
-feature's threshold classifier.
-<<class-tbest-show>>
-dummy = capture.output(fit.apColon.topresults <- messinaTopResults(fit.apColon))
-fit.apColon.topresults[c(1,tbestfeature.apColon),]
-plot(fit.apColon, i = 1, sort_feature == TRUE, plot_type = "point")
-plot(fit.apColon, i = which(trank.apColon == 1), sort_features = FALSE, plot_type = "point")
-@
-\fi
-
 \section{Detecting differential expression in the presence of outliers}
 
-TODO
-Simulation studies have indicated that Messina's
-false-discovery rate is acceptably low (\textless{} 10\%) under most
-conditions, so filtering is not necessary for FDR control \cite{Pinese:2009}.
+\subsection{Expression outliers}
 
-<<de-load-libs, message=FALSE>>=
-#library(messina)
-#library(leukemiasEset)
-#data(leukemiasEset)
+Messina provides a powerful framework for detecting differences in expression between
+two sample groups, even in the presence of `expression outliers'.  Here we define expression
+outliers for a given feature (eg. gene) as samples that have a level of signal very
+different from that of most of their class.  An example plot follows.
+
+<<de-outlier-example,echo=FALSE>>=
+library(ggplot2)
+temp.x = rep(c(0, 1), each = 6)
+set.seed(12345)
+temp.y = c(rnorm(6, 4, 0.5), rnorm(1, 4, 0.5), rnorm(5, 9, 0.5))
+temp.data = data.frame(y = temp.y, x = 1:length(temp.y), Group = factor(ifelse(temp.x, "Cancer", "Normal")))
+ggplot(temp.data, aes(y = y, x = x, fill = Group)) + geom_bar(stat = "identity") + ggtitle("Example of outlier expression") + xlab("Sample") + ylab("Expression in Sample") + theme(axis.text.x = element_blank(), axis.ticks.x = element_blank(), axis.text.y = element_blank())
 @
 
-To illustrate the power of Messina to detect differential expression in
-the presence of sample heterogeneity and outliers, we compare it to a
-basic T-test, again looking for the difference in expression between ALL
-and normal bone marrow.
+This figure shows the expression of a fictional gene in two experimental groups, cancer and normal, each containing six samples.  In
+general, the cancer samples show increased expression from the normals, and most samples within each
+group are quite consistent in their signal.  However, the leftmost cancer sample is displaying a signal that
+is consistent with the normal samples.  This sample is an expression outlier.
 
-First we perform the Messina fit on the data from the previous section,
-using minimum sensitivity and specificity values of 70\%. This is a good
-starting point for differential expression analysis, but can be varied
-according to the desired robustness to outliers.
+Expression outliers are common features in clinical data, in which unmeasured (and possibly even unknown)
+covariates can affect expression levels.  These covariates can be indicative of unknown substructure within
+a sample group: they can define sample subgroups.  Clinical data are also inevitably not as well controlled
+for various experimental factors as are laboratory-derived measurements, and so outliers may simply be a
+consequence of experimental error.  Regardless of whether the outliers are due to experimental error, or reflect new
+and unknown subgroups in the samples, it is valuable to have tools that can identify gene expression in a
+way that is robust to the presence of outliers.
 
-<<de_fit_messina>>=
-#messina_fit_diffexp = messina(expression_matrix, sample_is_all, min_sens = 0.7, 
-#	min_spec = 0.7, seed = 1234, progress = FALSE)
-#messina_fit_diffexp
-@
+Unfortunately, the presence of outliers violates a core assumption of classical statistical tests -- that
+all samples within a group are sampled identically and are exchangable.  For this reason, even modest levels of
+expression outliers drastically reduce the power of classical tests to identify differential expression\cite{Pinese:2009}, 
+with resulting poor robustness to experimental artifacts, and the potential to ignore genes that have
+expression that is linked to an unknown subtype.  As these genes are of great interest in many differential
+expression analyses, there is a real need for methods that can reliably identify differential expression
+in the presence of outliers.  The following section will demonstrate the use of Messina in this task.
 
-We then perform a basic T-test against each feature.
+\subsection{Example: Simulation and comparison to the t-test}
 
-<<de_fit_ttest>>=
-#ttest_fit_diffexp_pvalues = apply(expression_matrix, 1, function(xvals) 
-#	t.test(xvals ~ sample_is_all)$p.value)
-#ttest_fit_diffexp_pvalues_bh = p.adjust(ttest_fit_diffexp_pvalues, "BH")
-@
-
-We plot the results to compare them. For this example, we'll call
-features with corrected P-values less than 0.01 detected by the T-test,
-and features with margins of at least 1 detected by Messina.
-<<de_messina_vs_ttest>>=
-#plot(ttest_fit_diffexp_pvalues_bh ~ messina_fit_diffexp@fits@summary$margin, pch = ".", 
-#	xlab = "Messina Margin", ylab = "T-Test P-value", log = "y")
-#abline(h = 0.01)
-#abline(v = 1)
-#table(ttest_fit_diffexp_pvalues_bh < 0.01, messina_fit_diffexp@fits@summary$margin >= 1)
-@
+Section under construction.
 
 \section{Identifying the best features to predict survival outcome}
 
-TODO
+A new mode of Messina analysis the identification of optimal single features to
+use for prognosis, as opposed to the diagnosis case detailed previously.  The core
+concept is the same: to find single-feature threshold classifiers able to separate
+patients into two groups.  In the classification case above, the two groups were
+classes of patients, such as diseased and healthy.  In the prognosis case presented
+here, the two groups are defined by their survival time, as short survivors and
+long survivors.  In its survival mode, Messina aims to identify single features that
+can robustly separate patients who will likely experience an event quickly, from
+those who will likely go for some time without an event.
+
+In the classification case, the user inputs the minimum sensitivity and specificity
+that a Messina threshold classifier must satisfy, in effect creating a kind of
+cost-sensitive classification scheme.  The survival case is similar.  The user
+chooses an objective function that quantifies how different the survival times of
+two groups of patients is, and a minimum value of this function that all classifiers
+must be able to give on a test cohort.
+
+MessinaSurv currently has built-in three objective functions: `tau', `reltau', and
+`coxcoef'.  These are detailed in the documentation for the MessinaSurv function,
+and have differing properties.  In general, `tau' is a very stable objective, but
+penalizes cutoffs that will separate the cohort into very unbalanced subgroups.
+`reltau' and `coxcoef' do not have this penalty, but are more prone to unstable fits.
+`coxcoef' has an interpretation familiar to many working in the biomedical field,
+but is complex and by far the slowest objective function to calculate.  'tau` is a
+good first choice unless there is a strong reason to believe the cohort will contain a
+relatively small (< 25\%) subgroup of long- or short- survivors, but the user is
+encouraged to experiment with the different functions.  A future version of Messina
+may allow for user-supplied objectives.
+
+To illustrate the use of Messina on a survival problem, we load a (very small) subset of the TCGA
+KIRC expression data.
+<<surv-load>>=
+library(messina)
+library(survival)
+data(tcga_kirc_example)
+
+## The data are present as a matrix of expression values, and a Surv object of
+## survival times
+dim(kirc.exprs)
+kirc.surv
+@
+
+We then run messinaSurv on these data.  Note that messinaSurv is currently rather
+slow.  It is strongly recommended to use it in conjunction with doMC and as many
+cores as are available.  Note that there are only \Sexpr{nrow(kirc.exprs)} genes 
+in this dataset -- this very small number was chosen only to ensure that the vignette 
+executed quickly.  In practice, many thousands of genes may be assayed, and multiprocessing
+will be absolutely necessary.
+<<surv-fit>>=
+fit.surv = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE)
+
+fit.surv
+@
+
+Plotting the fit.surv object produces a plot of the best feature found.
+<<surv-plot>>=
+plot(fit.surv, bootstrap_type = "ci")
+@
+
 
 \section{Session info}
 <<sessionInfo, eval=TRUE>>=
 sessionInfo()
 @
 
-\bibliographystyle{plain}
+%\bibliographystyle{plain}
 \bibliography{../REFERENCES}
 
 \end{document}

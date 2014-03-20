@@ -1,3 +1,12 @@
+# messina-package.R: Roxygen2 documentation file for the Messina package.
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
+
 #' Single-gene classifiers and outlier-resistant detection of differential expression 
 #' for two-group and survival problems.
 #'
@@ -13,7 +22,7 @@
 #' @docType package
 #' @title The Messina package for classification and outlier differential expression.
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
-#' @references Pinese:2009 Pinese M, Scarlett CJ, Kench JG, et al. (2009)
+#' @references Pinese M, Scarlett CJ, Kench JG, et al. (2009)
 #'   Messina: A Novel Analysis Tool to Identify Biologically Relevant 
 #'   Molecules in Disease.  PLoS ONE 4(4): e5337.  \url{doi:10.1371/journal.pone.0005337}
 #' @keywords package

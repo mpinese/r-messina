@@ -1,3 +1,12 @@
+# messina.R: Main Messina classifier fitting functions
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
+
 #' Find optimal single feature classifiers
 #' 
 #' Run the Messina algorithm to find features (eg. genes) that optimally distinguish
@@ -58,15 +67,32 @@
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messinaDE}}
 #' @seealso \code{\link{messinaSurv}}
-#' @references Pinese:2009 Pinese M, Scarlett CJ, Kench JG, et al. (2009)
+#' @references Pinese M, Scarlett CJ, Kench JG, et al. (2009)
 #'   Messina: A Novel Analysis Tool to Identify Biologically Relevant 
 #'   Molecules in Disease.  PLoS ONE 4(4): e5337.  \url{doi:10.1371/journal.pone.0005337}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #'
 #' @examples
-#' \dontrun{
-#' #TODO
-#' }
+#' ## Load some example data
+#' library(antiProfilesData)
+#' data(apColonData)
+#' 
+#' x = exprs(apColonData)
+#' y = pData(apColonData)$SubType
+#' 
+#' ## Subset the data to only tumour and normal samples
+#' sel = y %in% c("normal", "tumor")
+#' x = x[,sel]
+#' y = y[sel]
+#' 
+#' ## Run Messina to rank probesets on their classification ability, with
+#' ## classifiers needing to meet a minimum sensitivity of 0.95, and minimum
+#' ## specificity of 0.85.
+#' fit = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85)
+#'
+#' ## Display the results.
+#' fit
+#' plot(fit)
 messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = NULL, progress = TRUE, silent = FALSE)
 {
 	if (class(x) == "ExpressionSet")
@@ -231,6 +257,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50, seed = 
 }
 
 
+#' @importFrom Rcpp evalCpp
 messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent)
 {
 	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent, PACKAGE = "messina")
@@ -287,15 +314,31 @@ messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rpr
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
 #' @seealso \code{\link{messina}}
 #' @seealso \code{\link{messinaSurv}}
-#' @references Pinese:2009 Pinese M, Scarlett CJ, Kench JG, et al. (2009)
+#' @references Pinese M, Scarlett CJ, Kench JG, et al. (2009)
 #'   Messina: A Novel Analysis Tool to Identify Biologically Relevant 
 #'   Molecules in Disease.  PLoS ONE 4(4): e5337.  \url{doi:10.1371/journal.pone.0005337}
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #'
 #' @examples
-#' \dontrun{
-#' #TODO
-#' }
+#' ## Load some example data
+#' library(antiProfilesData)
+#' data(apColonData)
+#' 
+#' x = exprs(apColonData)
+#' y = pData(apColonData)$SubType
+#' 
+#' ## Subset the data to only tumour and normal samples
+#' sel = y %in% c("normal", "tumor")
+#' x = x[,sel]
+#' y = y[sel]
+#' 
+#' ## Find differentially-expressed probesets.  Allow a sample misattribution rate of
+#' ## at most 20%.
+#' fit = messinaDE(x, y == "tumor", max_misattribution_rate = 0.2)
+#'
+#' ## Display the results.
+#' fit
+#' plot(fit)
 messinaDE <- function(x, y, max_misattribution_rate, f_train = 0.9, n_boot = 50, seed = NULL, progress = TRUE, silent = FALSE)
 {
 	return(messina(x = x, y = y, min_sens = 1 - max_misattribution_rate, min_spec = 1 - max_misattribution_rate, f_train = f_train, n_boot = n_boot, seed = seed, progress = progress, silent = silent))

@@ -1,3 +1,11 @@
+# AllClasses.R: S4 class definitions for Messina result objects
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
 setOldClass("Surv")
 
 setClassUnion("MessinaY", c("Surv", "vector"))

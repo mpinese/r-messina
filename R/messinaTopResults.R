@@ -1,3 +1,12 @@
+# messinTopResults.R: Functions to display a summary table of Messina results
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
+
 #' Display a summary of the top results from a Messina analysis
 #' 
 #' Sorts the summary results of a Messina analysis in decreasing order of classifier margin,
@@ -61,9 +70,31 @@
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #'
 #' @examples
-#' \dontrun{
-#' #TODO
-#' }
+#' ## Load some example data
+#' library(antiProfilesData)
+#' data(apColonData)
+#' 
+#' x = exprs(apColonData)
+#' y = pData(apColonData)$SubType
+#' 
+#' ## Subset the data to only tumour and normal samples
+#' sel = y %in% c("normal", "tumor")
+#' x = x[,sel]
+#' y = y[sel]
+#' 
+#' ## Find differentially-expressed probesets.  Allow a sample misattribution rate of
+#' ## at most 20%.
+#' fit = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85)
+#'
+#' ## Print the 20 probesets with the strongest evidence for differential expression
+#' ## between tumour and normal.  Save the full table of summary results for later use.
+#' summary_table = messinaTopResults(fit, 20)
+#'
+#' ## Access the top five probesets in the table
+#' summary_table[1:5,]
+#'
+#' ## Examine the summary results for particular probes
+#' summary_table[c("204719_at", "207502_at"),]
 messinaTopResults = function(result, n = 10)
 {
 	if (is(result, "MessinaResult"))
