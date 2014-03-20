@@ -125,9 +125,9 @@ messinaSurv = function(x, y, obj_min, obj_func, min_group_frac = 0.1, f_train = 
 	
 	if (is.null(parallel))
 	{
-		if ("doMC" %in% .packages())
+		if (("doMC" %in% .packages()) && require(foreach))
 		{
-			parallel = (getDoParWorkers() > 1)
+			parallel = foreach::getDoParWorkers() > 1
 		}
 		else
 		{

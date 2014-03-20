@@ -1,5 +1,5 @@
 /* messinaExtern.cpp
- * R interface for the Messina algorithm.
+ * Rcpp interface for the Messina algorithm.
  *
  * Copyright 2014 Mark Pinese
  *
@@ -13,17 +13,11 @@
  * 20130603 Placed under the EPL licence.
  * 20140228 Added progress and silent options.
  * 20140302	Removed unnecessary seed parameter.
+ * 20140321 Converted to using Rcpp attributes.  Now requires a
+ *          pass of Rcpp::compileAttributes before R CMD build.
  */
 
 #include <Rcpp.h>
-
-#ifndef BEGIN_RCPP
-#define BEGIN_RCPP
-#endif
-
-#ifndef END_RCPP
-#define END_RCPP
-#endif
 
 #include "types.h"
 #include "Data.h"
@@ -36,56 +30,32 @@ using namespace Rcpp;
 using namespace std;
 
 
-// R interface declaration ///////////////////////////////////////////////////////////////////
-extern "C" 
-{
-	SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rprogress, SEXP Rsilent);
-}
-
-
-// Native routine registration ///////////////////////////////////////////////////////////////
-//R_CallMethodDef callMethods[] = {
-//	{"messinaCextern", (DL_FUNC) &messinaCextern, 8},
-//	{NULL, NULL, 0}
-//};
-
-
 // Internal function declarations ////////////////////////////////////////////////////////////
 STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data);
-SEXP convertResults2R(Result *results, uint32_t n_results);
+List convertResults2R(Result *results, uint32_t n_results);
 
 
 // Function definitions //////////////////////////////////////////////////////////////////////
 
-/*	Launch point for Messina C code called from R.
-	Rx			NumericMatrix	Data matrix, as integers in [0, 65535].  Probes / genes are in rows, samples in columns.
-	Rcls		LogicalVector	Class membership vector, true/false for each sample.
-	Rn_boot		Integer			Number of bootstrap iterations.
-	Rn_train	Integer			Number of samples to draw for training in each bootstrap iteration.
-	Rminsens	Float			Minimum classifier sensitivity.
-	Rminspec	Float			Minimum classifier specificity.
-	Rprogress	Logical			Display progress bar?
-	Rsilent		Logical			Be completely silent (except for errors or warnings)?
+/*	Launch point for Messina C code called from R.  Arguments:
+	x			NumericMatrix	Data matrix, as integers in [0, 65535].  Probes / genes are in rows, samples in columns.
+	cls			LogicalVector	Class membership vector, true/false for each sample.
+	n_boot		Integer			Number of bootstrap iterations.
+	n_train		Integer			Number of samples to draw for training in each bootstrap iteration.
+	minsens		Float			Minimum classifier sensitivity.
+	minspec		Float			Minimum classifier specificity.
+	progress	Logical			Display progress bar?
+	silent		Logical			Be completely silent (except for errors or warnings)?
 
 	The Messina code populates an array of type Result (defined in Classifier.h), which then
-	is converted back to SEXP objects for return to R.
+	is converted back to a list of objects for return to R.
 */
-SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminsens, SEXP Rminspec, SEXP Rprogress, SEXP Rsilent)
+// [[Rcpp::export]]
+List messinaC(NumericMatrix x, LogicalVector cls, uint32_t n_boot, uint32_t n_train, float minsens,
+	float minspec, bool progress, bool silent)
 {
-	BEGIN_RCPP
-
-	NumericMatrix x(Rx);
-	LogicalVector cls(Rcls);
-	
-	uint32_t n_boot = as<uint32_t>(Rn_boot);
-	uint32_t n_train = as<uint32_t>(Rn_train);
-	float minsens = as<float>(Rminsens);
-	float minspec = as<float>(Rminspec);	
 	STATUS err;
 	string errmsg;
-	SEXP retval;
-	bool progress = as<bool>(Rprogress);
-	bool silent = as<bool>(Rsilent);
 	
 	RNGScope scope;	
 	
@@ -118,11 +88,9 @@ SEXP messinaCextern(SEXP Rx, SEXP Rcls, SEXP Rn_boot, SEXP Rn_train, SEXP Rminse
 		return wrap<string>(errmsg);
 	}
 	
-	retval = convertResults2R(results, data.getNGenes());
+	List retval = convertResults2R(results, data.getNGenes());
 	delete results;
 	return retval;
-	
-	END_RCPP
 }
 
 
@@ -161,7 +129,6 @@ STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data)
 		for (probe_i = 0; probe_i < n_probes; probe_i++)
 		{
 			exprs_array[probe_i + n_probes * sample_i] = static_cast<uint16_t>(x(probe_i, sample_i));	// Sample-major order
-//			exprs_array[probe_i + n_probes * sample_i] = as<uint16_t>(x(probe_i, sample_i));	// Sample-major order
 		}
 	}
 	
@@ -174,7 +141,7 @@ STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data)
 }
 
 
-SEXP convertResults2R(Result *results, uint32_t n_results)
+List convertResults2R(Result *results, uint32_t n_results)
 {
 	IntegerMatrix d1(n_results, 3);		// class_type, class_threshold, class_margin
 	NumericMatrix d2(n_results, 10);	// class_ptrue, p_successful, perf_mean(tpr,fpr,tnr,fnr), perf_var(tpr,fpr,tnr,fnr)
