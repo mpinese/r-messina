@@ -99,7 +99,7 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' multiprocessing to speed calculations if doMC is loaded and more than one core registered for use.
 #' For examples of the plots and their interpretation, see the vignette.
 #'
-# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1)), ...)
+# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = NULL, ...)
 #'
 # @inheritParams plot,MessinaClassResult,missing-method
 #' @param object the result of a Messina analysis, as returned by functions \code{\link{messina}}
@@ -137,7 +137,6 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #'
 #' @examples
-#' \dontrun{
 #' ## Load a subset of the TCGA renal clear cell carcinoma data
 #' ## as an example.
 #' data(tcga_kirc_example)
@@ -146,10 +145,9 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' ## objective, with a minimum performance of 0.6.  Note that
 #' ## messinaSurv analyses are very computationally-intensive,
 #' ## so multicore use with doMC loaded and parallel = TRUE is
-#' ## strongly recommended.
-#' library(doMC)
-#' registerDoMC(32)
-#' fit = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = TRUE)
+#' ## strongly recommended.  In this example we use a single 
+#' ## core by default.
+#' fit = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6)
 #'
 #' ## Plot the three best features found by Messina
 #' plot(fit, indices = 1:3)
@@ -157,13 +155,12 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' ## Plot the best feature found by Messina, with 90% confidence bands.
 #' ## Note that the bootstrap iterations can be slow, so it is 
 #' ## recommended that multiple cores are used, with doMC loaded 
-#' ## and parallel = TRUE
-#' plot(fit, indices = 1, bootstrap_type = "ci", bootstrap_ci = 0.9, parallel = TRUE)
+#' ## and parallel = TRUE.
+#' plot(fit, indices = 1, bootstrap_type = "ci", bootstrap_ci = 0.9)
 #'
 #' ## Plot the Messina fit of the 10th feature in the dataset, with
 #' ## +/- 1 standard deviation bands.
 #' plot(fit, indices = 10, sort_features = FALSE, bootstrap_type = "stdev")
-#' }
 setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"), definition = function(x, y, ...) messinaSurvPlot(object = x, ...))
 
 
@@ -259,9 +256,9 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 
 	if (is.null(parallel))
 	{
-		if ("doMC" %in% .packages())
+		if (("doMC" %in% .packages()) && require(foreach))
 		{
-			parallel = (getDoParWorkers() > 1)
+			parallel = foreach::getDoParWorkers() > 1
 		}
 		else
 		{

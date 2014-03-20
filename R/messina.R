@@ -68,6 +68,10 @@
 #' @return an object of class "MessinaClassResult" containing the results of 
 #'   the analysis.
 #'
+# Note: this strictly is for the messinaC function in RcppExports.R, but as that 
+# file's auto-generated, we put the import here
+#' @importFrom Rcpp evalCpp
+#'
 #' @export
 #' @seealso \code{\link{MessinaClassResult-class}}
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
@@ -178,7 +182,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	stopifnot(all(xtrans <= 65535) & all(xtrans >= 0))
 	
 	# Call the external C functions for the actual calculation.
-	result = messinaExtern(xtrans, y, n_boot, n_train, min_sens, min_spec, progress, silent)
+	result = messinaC(xtrans, y, n_boot, n_train, min_sens, min_spec, progress, silent)
 	
 	if (typeof(result) == "character")
 	{
@@ -262,13 +266,6 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	
 	
 	return(result2)
-}
-
-
-#' @importFrom Rcpp evalCpp
-messinaExtern <- function(Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent)
-{
-	.Call("messinaCextern", Rx, Rcls, Rbootiter, Rn_train, Rminsens, Rminspec, Rprogress, Rsilent, PACKAGE = "messina")
 }
 
 
