@@ -1,3 +1,12 @@
+# show-methods: Methods for the show generic on Messina objects.
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
+
 #' Generic show methods for Messina objects.
 #'
 #' Generic show methods for Messina objects.
@@ -5,6 +14,8 @@
 #' For details of the objects and their generation, see the relevant class documentation,
 #' and entries for the main functions \code{\link{messina}}, \code{\link{messinaDE}}, and 
 #' \code{\link{messinaSurv}}, 
+#' 
+#' @importFrom methods show
 #' 
 #' @export
 #' @seealso \code{\link{MessinaResult-class}}
@@ -30,6 +41,8 @@ setMethod("show", signature = "MessinaResult", definition = function(object)
 
 #' @export
 #' @rdname show-methods
+#' 
+#' @importFrom methods show
 setMethod("show", signature = "MessinaParameters", definition = function(object) 
 {
 	cat("  An object of class MessinaParameters\n", sep = "")
@@ -53,6 +66,8 @@ setMethod("show", signature = "MessinaParameters", definition = function(object)
 
 #' @export
 #' @rdname show-methods
+#' 
+#' @importFrom methods show
 setMethod("show", signature = "MessinaFits", definition = function(object) 
 {
 	cat("  An object of class MessinaFits\n", sep = "")	

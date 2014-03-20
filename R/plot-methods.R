@@ -1,4 +1,10 @@
-if (!isGeneric("plot"))		{ setGeneric("plot", function(x, y, ...) standardGeneric("plot")) }
+# plot-methods.R: Methods for the plot generic on MessinaResult objects
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
 
 
 #' Plot the results of a Messina analysis on a classification / differential expression problem.
@@ -37,9 +43,28 @@ if (!isGeneric("plot"))		{ setGeneric("plot", function(x, y, ...) standardGeneri
 #' @author Mark Pinese \email{m.pinese@@garvan.org.au}
 #'
 #' @examples
-#' \dontrun{
-#' #TODO
-#' }
+#' ## Load some example data
+#' library(antiProfilesData)
+#' data(apColonData)
+#' 
+#' x = exprs(apColonData)
+#' y = pData(apColonData)$SubType
+#' 
+#' ## Subset the data to only tumour and normal samples
+#' sel = y %in% c("normal", "tumor")
+#' x = x[,sel]
+#' y = y[sel]
+#' 
+#' ## Run Messina to rank probesets on their classification ability, with
+#' ## classifiers needing to meet a minimum sensitivity of 0.95, and minimum
+#' ## specificity of 0.85.
+#' fit = messina(x, y == "tumor", min_sens = 0.95, min_spec = 0.85)
+#'
+#' ## Make bar plots of the five best fits
+#' plot(fit, indices = 1:5, sort_features = TRUE, plot_type = "bar")
+#'
+#' ## Make a point plot of the fit to the 10th feature
+#' plot(fit, indices = 10, sort_features = FALSE, plot_type = "point")
 setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing"), definition = function(x, y, ...) messinaClassPlot(object = x, ...))
 
 
@@ -74,9 +99,20 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #' multiprocessing to speed calculations if doMC is loaded and more than one core registered for use.
 #' For examples of the plots and their interpretation, see the vignette.
 #'
-# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1)), ...)
+# @usage plot(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1)), ...)
 #'
-#' @inheritParams plot,MessinaClassResult,missing-method
+# @inheritParams plot,MessinaClassResult,missing-method
+#' @param object the result of a Messina analysis, as returned by functions \code{\link{messina}}
+#'   or \code{\link{messinaDE}}.
+#' @param indices a vector of indices of features to plot.  If sort_features == FALSE, the indices
+#'   are into the unsorted features, as originally supplied in x supplied to messina or messinaDE.
+#'   If sort_features == TRUE, features are first sorted in order of decreasing margin, and then 
+#'   the indices in this parameter are plotted.  For example, if indices == 2 and sort_features == FALSE,
+#'   the second feature in x will be plotted.  However, if sort_features == TRUE, the feature with
+#'   the second best classifier margin will be plotted.
+#' @param sort_features a boolean indicating whether to sort features by decreasing margin size
+#'   before selecting from indices.  This affects the interpretation of the parameter 'indices'; for
+#'   more details see the description of that parameter.
 #' @param bootstrap_type a string giving the type of bootstrap error band to produce on the survival prediction
 #'   plots.  Can take three values: "none", "stdev", and "ci".  "none", the default, plots no error bands.
 #'   "stdev" performs multiple rounds of Kaplan-Meier curve estimation on bootstrap samples,
@@ -102,11 +138,37 @@ setMethod("plot", signature = signature(x = "MessinaClassResult", y = "missing")
 #'
 #' @examples
 #' \dontrun{
-#' #TODO
+#' ## Load a subset of the TCGA renal clear cell carcinoma data
+#' ## as an example.
+#' data(tcga_kirc_example)
+#' 
+#' ## Run the messinaSurv analysis on these data.  Use a tau
+#' ## objective, with a minimum performance of 0.6.  Note that
+#' ## messinaSurv analyses are very computationally-intensive,
+#' ## so multicore use with doMC loaded and parallel = TRUE is
+#' ## strongly recommended.
+#' library(doMC)
+#' registerDoMC(32)
+#' fit = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = TRUE)
+#'
+#' ## Plot the three best features found by Messina
+#' plot(fit, indices = 1:3)
+#'
+#' ## Plot the best feature found by Messina, with 90% confidence bands.
+#' ## Note that the bootstrap iterations can be slow, so it is 
+#' ## recommended that multiple cores are used, with doMC loaded 
+#' ## and parallel = TRUE
+#' plot(fit, indices = 1, bootstrap_type = "ci", bootstrap_ci = 0.9, parallel = TRUE)
+#'
+#' ## Plot the Messina fit of the 10th feature in the dataset, with
+#' ## +/- 1 standard deviation bands.
+#' plot(fit, indices = 10, sort_features = FALSE, bootstrap_type = "stdev")
 #' }
 setMethod("plot", signature = signature(x = "MessinaSurvResult", y = "missing"), definition = function(x, y, ...) messinaSurvPlot(object = x, ...))
 
 
+#' @import ggplot2
+#' @importFrom grid grid.newpage
 messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_type = "bar")
 {
 	Sample = Value = Class = NULL		# To shut up an R CMD check note for the later use of these in ggplot
@@ -133,9 +195,11 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 	}
 	
 	indices = feature_perm[indices]
-	
+
 	for (i in indices)
 	{
+		grid.newpage()
+
 		feature = object@parameters@features[i]
 		x = object@parameters@x[i,]
 
@@ -176,7 +240,10 @@ messinaClassPlot = function(object, indices = c(1), sort_features = TRUE, plot_t
 }
 
 
-messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1))
+#' @import ggplot2
+# @importFrom gridExtra grid.arrange
+#' @importFrom grid grid.newpage viewport pushViewport popViewport grid.layout
+messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstrap_type = "none", bootstrap_ci = 0.90, nboot = ifelse(bootstrap_type == "ci", 50/(1-bootstrap_ci), 50), parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1))
 {
 	if (!(bootstrap_type %in% c("none", "ci", "stdev")))
 	{
@@ -221,6 +288,8 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 
 	for (i in indices)
 	{
+		grid.newpage()
+		
 		x = object@parameters@x[i,]
 		feature = object@parameters@features[i]
 
@@ -237,8 +306,13 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 		{
 			km_plot_all = messinaSurvKMplotSingleGroup(y = y, bootstrap_type = bootstrap_type, bootstrap_ci = bootstrap_ci, nboot = nboot, parallel = parallel) + 
 				ggtitle(paste("KM of Full Cohort (no valid threshold found)", bootstrap_string, sep = "\n"))
-			
-			grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Failed Fit: Feature %s", feature))
+
+			pushViewport(viewport(layout = grid.layout(2, 1)))
+			print(obj_plot, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+			print(km_plot_all, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+			#popViewport(2)
+
+			#grid.arrange(obj_plot, km_plot_all, main = sprintf("MessinaSurv Failed Fit: Feature %s", feature))
 		}
 		else
 		{
@@ -251,8 +325,15 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 			km_plot_upper_margin = messinaSurvKMplot(y = y, group = (x > threshold + margin/2)*1, bootstrap_type = bootstrap_type, bootstrap_ci = bootstrap_ci, nboot = nboot, parallel = parallel) + 
 				ggtitle(paste("Separation at Upper Margin", bootstrap_string, sep = "\n")) + 
 				theme(legend.position = "bottom")
+
+			pushViewport(viewport(layout = grid.layout(2, 2)))
+			print(obj_plot, vp = viewport(layout.pos.row = 1, layout.pos.col = 1))
+			print(km_plot_threshold, vp = viewport(layout.pos.row = 1, layout.pos.col = 2))
+			print(km_plot_lower_margin, vp = viewport(layout.pos.row = 2, layout.pos.col = 1))
+			print(km_plot_upper_margin, vp = viewport(layout.pos.row = 2, layout.pos.col = 2))
+			#popViewport(4)
 			
-			grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
+			#grid.arrange(obj_plot, km_plot_threshold, km_plot_lower_margin, km_plot_upper_margin, main = sprintf("MessinaSurv Fit: Feature %s", feature))
 		}
 	}
 	
@@ -260,6 +341,7 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 }
 
 
+#' @import ggplot2
 messinaSurvObjPlot = function(object, i)
 {
 	Threshold = Objective = NULL		# To shut up an R CMD check note for the later use of these in ggplot
@@ -274,8 +356,8 @@ messinaSurvObjPlot = function(object, i)
 	objective_surfaces = object@fits@objective_surfaces[[i]]
 	plot_data = data.frame(Objective = objective_surfaces$objective, Threshold = objective_surfaces$cutoff)
 
-	cutoff_fracs = sapply(plot_data$Threshold, function(cutoff) mean(parameters@x[i,] <= cutoff))
-	cutoff_frac_ok = pmin(cutoff_fracs, 1 - cutoff_fracs) >= parameters@minimum_group_fraction
+	cutoff_frac_points = quantile(parameters@x[i,], probs = c(parameters@minimum_group_fraction, 1 - parameters@minimum_group_fraction))
+	cutoff_frac_ok = (parameters@x[i,] >= cutoff_frac_points[1]) && (parameters@x[i,] <= cutoff_frac_points[2])
 	
 	plot_data$Colour = c("darkgrey", "black")[cutoff_frac_ok + 1]
 	
@@ -287,7 +369,7 @@ messinaSurvObjPlot = function(object, i)
 	if (zapsmall(parameters@minimum_group_fraction) != 0)
 	{
 		theplot = theplot + 
-			geom_vline(xintercept = c(max(plot_data$Threshold[cutoff_fracs <= parameters@minimum_group_fraction]), min(plot_data$Threshold[cutoff_fracs >= (1-parameters@minimum_group_fraction)])), lty = "dotted", alpha = 0.5)
+			geom_vline(xintercept = cutoff_frac_points, lty = "dotted", alpha = 0.5)
 	}
 
 	if (objective_type %in% c("tau", "reltau"))
@@ -299,7 +381,7 @@ messinaSurvObjPlot = function(object, i)
 	}
 	else if (objective_type == "coxcoef")
 	{	
-		y_limit = max(c(objective_min, abs(plot_data$Objective)[pmin(cutoff_fracs, 1 - cutoff_fracs) >= parameters@minimum_group_fraction]))
+		y_limit = max(c(objective_min, abs(plot_data$Objective)[cutoff_frac_ok]))
 		theplot = theplot + 
 			coord_cartesian(ylim = c(-y_limit, y_limit)*1.3) + 
 			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
@@ -322,6 +404,8 @@ messinaSurvObjPlot = function(object, i)
 }
 
 
+#' @importFrom survival survfit
+#' @importFrom plyr llply
 calcKaplanMeierEstimates = function(y, x)
 {
 	xvals = sort(as.character(unique(x)))
@@ -344,6 +428,7 @@ calcKaplanMeierEstimatesOnBootstrapSample = function(y, x)
 }
 
 
+#' @importFrom plyr llply
 calcBootstrapKaplanMeierEstimates = function(y, x, nboot, parallel)
 {
 	xvals = sort(as.character(unique(x)))
@@ -355,6 +440,7 @@ calcBootstrapKaplanMeierEstimates = function(y, x, nboot, parallel)
 }
 
 
+#' @importFrom plyr llply laply
 calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(unique(y[,1])), parallel)
 {
 	ests = calcBootstrapKaplanMeierEstimates(y = y, x = x, nboot = nboot, parallel = parallel)
@@ -388,6 +474,8 @@ calcBootstrapKaplanMeierEstimatesAtTimes = function(y, x, nboot, times = sort(un
 }
 
 
+#' @import ggplot2
+#' @importFrom plyr aaply
 messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot, parallel)
 {
 	Time = Survival = NULL		# To shut up an R CMD check note for the later use of these in ggplot
@@ -406,13 +494,14 @@ messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot, 
 			boot_km_l = aaply(boot_km[,-1,drop=FALSE], 1, quantile, probs = 1-bootstrap_ci, na.rm = TRUE)
 			boot_km_u = aaply(boot_km[,-1,drop=FALSE], 1, quantile, probs = bootstrap_ci, na.rm = TRUE)
 		}
-		else
+		else if (bootstrap_type == "stdev")
 		{
 			boot_km_sd = aaply(boot_km[,-1,drop=FALSE], 1, sd, na.rm = TRUE)
 			boot_km_c = rowMeans(boot_km[,-1])
 			boot_km_l = boot_km_c - boot_km_sd
 			boot_km_u = boot_km_c + boot_km_sd
 		}
+		else	{ stop("Unknown bootstrap_type") }
 		
 		boot_data = data.frame(	Time = boot_times, Survival = boot_km_c, SurvMin = boot_km_l, SurvMax = boot_km_u)
 		boot_data = boot_data[!is.na(boot_data$Survival) & !is.na(boot_data$SurvMin) & !is.na(boot_data$SurvMax),]
@@ -439,6 +528,8 @@ messinaSurvKMplotSingleGroup = function(y, bootstrap_type, bootstrap_ci, nboot, 
 }
 
 
+#' @import ggplot2
+#' @importFrom plyr aaply llply
 messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot, parallel)
 {
 	Time = Survival = Group = NULL		# To shut up an R CMD check note for the later use of these in ggplot
@@ -460,7 +551,7 @@ messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot, para
 			boot_km_l = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = 1-bootstrap_ci, na.rm = TRUE))
 			boot_km_u = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, quantile, probs = bootstrap_ci, na.rm = TRUE))
 		}
-		else
+		else if (bootstrap_type == "stdev")
 		{
 			boot_km_sd = llply(boot_km, function(boots) aaply(boots[,-1,drop=FALSE], 1, sd, na.rm = TRUE))
 			boot_km_c = llply(c("0", "1"), function(group) rowMeans(boot_km[[group]][,-1]))
@@ -470,6 +561,7 @@ messinaSurvKMplot = function(y, group, bootstrap_type, bootstrap_ci, nboot, para
 			names(boot_km_l) = c("0", "1")
 			names(boot_km_u) = c("0", "1")
 		}
+		else	{ stop("Unknown bootstrap_type") }
 		
 		boot_data = data.frame(	Time = rep(boot_times, 2), 
 								Survival = c(boot_km_c[["0"]], boot_km_c[["1"]]),

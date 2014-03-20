@@ -1,3 +1,12 @@
+# messinaSurv.R: Main Messina survival fitting functions
+# 
+# Copyright 2014 Mark Pinese
+#
+# This file is distributed under the terms of the Eclipse Public 
+# License v1.0, available at:
+# https://www.eclipse.org/org/documents/epl-v10.html
+
+
 #' Find optimal prognostic features using the Messina algorithm
 #' 
 #' Run the MessinaSurv algorithm to find features (eg. genes) that can define groups
@@ -83,9 +92,12 @@
 #'   default, parallel mode is used if the doMC library is loaded, and more than one
 #'   core has been registered with registerDoMC().  Note that no progress bar is
 #'   displayed in parallel mode.
+#' @param silent be completely silent (except for error and warning messages)?
 #' 
 #' @return an object of class "MessinaSurvResult" containing the results of the analysis.
 #' 
+#' @importFrom plyr aaply llply
+#'
 #' @export
 #' @seealso \code{\link{MessinaSurvResult-class}}
 #' @seealso \code{\link[Biobase]{ExpressionSet}}
@@ -95,9 +107,21 @@
 #' 
 #' @examples
 #' \dontrun{
-#' #TODO
+#' ## Load a subset of the TCGA renal clear cell carcinoma data
+#' ## as an example.
+#' data(tcga_kirc_example)
+#' 
+#' ## Run the messinaSurv analysis on these data.  Use a tau
+#' ## objective, with a minimum performance of 0.6.  Note that
+#' ## messinaSurv analyses are very computationally-intensive,
+#' ## so in actual use multicore use with doMC and parallel = TRUE
+#' ## is strongly recommended.
+#' fit = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6)
+#'
+#' fit
+#' plot(fit)
 #' }
-messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (doMC::getDoParWorkers() > 1))
+messinaSurv = function(x, y, obj_min, obj_func, min_group_frac = 0.1, f_train = 0.8, n_boot = 50, seed = NULL, parallel = ("doMC" %in% .packages()) && (getDoParWorkers() > 1), silent = FALSE)
 {
 	stopifnot(class(y) == "Surv")
 
@@ -131,8 +155,8 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_
 
 	n_test = ceiling((1 - f_train) * nrow(y))
 
-	cat("Performance bootstrapping...\n")
-	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, min_group_frac, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = ifelse(parallel, "none", "time"))
+	if (!silent) { message("Performance bootstrapping...") }
+	boot_objs = aaply(x, 1, function(xi) messinaSurvSingleX(xi, y = y, min_group_frac, obj_min = obj_min, obj_func = obj_func, n_boot = n_boot, n_test = n_test), .parallel = parallel, .progress = ifelse(parallel || silent, "none", "time"))
 
 	rownames(boot_objs) = rownames(x)
 	colnames(boot_objs) <- NULL
@@ -150,9 +174,9 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_
 	# passing rows, but it's proven useful to have all fit trajectories
 	# for diagnostics, and it adds little extra compute time above and
 	# beyond the LOOCV).
-	cat("Final training...\n")
-#	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes, parallel = parallel)
-	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes | TRUE, parallel = parallel)
+	if (!silent) { message("Final training...") }
+#	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes, parallel = parallel, silent = silent)
+	fits = messinaSurvTrainOnSubset(x, y, min_group_frac, obj_min, obj_func, obj_passes | TRUE, parallel = parallel, silent = silent)
 	
 	thresholds = sapply(fits, function(f) ifelse(is.null(f), NA, f$threshold))
 	posks = sapply(fits, function(f) ifelse(is.null(f), NA, f$direction)) == 1
@@ -189,6 +213,7 @@ messinaSurv = function(x, y, obj_min, obj_func = "tau", min_group_frac = 0.1, f_
 }
 
 
+#' @importFrom survival survConcordance.fit coxph
 messinaSurvObjectiveFunc = function(x, y, func)
 {
 	if (func == "tau")
@@ -351,7 +376,8 @@ messinaSurvSingleX = function(x1, y, min_group_frac, obj_min, obj_func, n_boot, 
 }
 
 
-messinaSurvTrainOnSubset = function(x, y, min_group_frac, obj_min, obj_func, subset, parallel)
+#' @importFrom plyr aaply llply
+messinaSurvTrainOnSubset = function(x, y, min_group_frac, obj_min, obj_func, subset, parallel, silent)
 {
 	fits = llply(1:nrow(x), 
 		function(xi) 
@@ -365,7 +391,7 @@ messinaSurvTrainOnSubset = function(x, y, min_group_frac, obj_min, obj_func, sub
 			{
 				return(NULL)
 			}
-		}, .parallel = parallel, .progress = ifelse(parallel, "none", "time"))
+		}, .parallel = parallel, .progress = ifelse(parallel || silent, "none", "time"))
 	
 	return(fits)
 }
