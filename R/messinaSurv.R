@@ -250,9 +250,37 @@ messinaSurvObjectiveFunc = function(x, y, func)
 	}
 	else if (func == "coxcoef")
 	{
-		fit = try(coxph(y ~ x))
-		if (typeof(fit) == "try-error")	{ return(NA) }
-		return(coef(fit))
+		# Solid: Uses external interface only:
+		# fit = try(coxph(y ~ x))
+		# if (typeof(fit) == "try-error")	{ return(NA) }
+		# return(coef(fit))
+
+		# Slightly risky: Uses internal survival function, but a fairly high-level one:
+		# fit = try(coxph.fit(cbind(1, x), y, strata = NULL, offset = NULL, init = NULL, control = coxph.control(), weights = NULL, method = NULL, 1:length(x)))
+		# if (typeof(fit) == "try-error")	{ return(NA) }
+		# return(fit$coefficients[[2]])
+
+		# Very risky: Uses internal undocumented C code
+		n <- length(x)
+		time = y[,1]
+		status = y[,2]
+		sorted <- order(time)
+		newstrat <- as.integer(rep(0, n))
+		offset <- rep(0, n)
+		weights <- rep(1, n)
+		stime <- as.double(time[sorted])
+		sstat <- as.integer(status[sorted])
+		sx <- as.double(x[sorted])
+		control = coxph.control()
+		method = "efron"
+		maxiter <- control$iter.max
+		init <- 0
+		storage.mode(weights) <- storage.mode(init) <- "double"
+		library.dynam("survival", "survival", .Library)
+		return(.Call("Ccoxfit6", as.integer(maxiter), stime, sstat, 
+			sx, as.double(offset[sorted]), weights, newstrat, 
+			as.integer(method == "efron"), as.double(control$eps), 
+			as.double(control$toler.chol), as.vector(init), as.integer(1), PACKAGE = "survival")$coef)
 	}
 	else
 	{
@@ -356,6 +384,7 @@ messinaSurvTrain = function(x1, y, min_group_frac, obj_min, obj_func)
 messinaSurvSingleXDraw = function(x1, y, min_group_frac, obj_min, obj_func, n_test)
 {
 	# TODO: Make sure there are enough events in the test set to be useful
+	# TODO: Check this vs Messina!
 	test_indices = sample.int(length(x1), n_test)
 	train_indices = setdiff(1:length(x1), test_indices)
 	x_test = x1[test_indices]

@@ -365,8 +365,8 @@ messinaSurvObjPlot = function(object, i)
 	
 #	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective, color = Colour)) + 
 	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective)) + 
-		geom_line(alpha = 0.5) + 
-		geom_point()
+		geom_line(alpha = 0.85, size = 0.7)# + 
+		#geom_point()
 
 	if (zapsmall(parameters@minimum_group_fraction) != 0)
 	{
@@ -383,7 +383,8 @@ messinaSurvObjPlot = function(object, i)
 	}
 	else if (objective_type == "coxcoef")
 	{	
-		y_limit = max(c(objective_min, abs(plot_data$Objective)[cutoff_frac_ok]))
+		#y_limit = max(c(objective_min, abs(plot_data$Objective)[cutoff_frac_ok]))
+		y_limit = max(c(objective_min, abs(plot_data$Objective[plot_data$Threshold >= threshold - margin & plot_data$Threshold <= threshold + margin])))
 		theplot = theplot + 
 			coord_cartesian(ylim = c(-y_limit, y_limit)*1.3) + 
 			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
