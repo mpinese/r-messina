@@ -358,15 +358,18 @@ messinaSurvObjPlot = function(object, i)
 	objective_surfaces = object@fits@objective_surfaces[[i]]
 	plot_data = data.frame(Objective = objective_surfaces$objective, Threshold = objective_surfaces$cutoff)
 
-	cutoff_frac_points = quantile(parameters@x[i,], probs = c(parameters@minimum_group_fraction, 1 - parameters@minimum_group_fraction))
-	cutoff_frac_ok = (parameters@x[i,] >= cutoff_frac_points[1]) && (parameters@x[i,] <= cutoff_frac_points[2])
+	plot_data$frac = sapply(plot_data$Threshold, function(thresh) mean(parameters@x[i,] < thresh))
+	plot_data$frac = pmin(plot_data$frac, 1 - plot_data$frac)
+	plot_data$frac_ok = plot_data$frac >= parameters@minimum_group_fraction
+	plot_data$in_acceptance_region = plot_data$Threshold >= threshold - margin/2 & plot_data$Threshold <= threshold + margin/2
+	cutoff_frac_points = c(plot_data$Threshold[min(which(plot_data$frac_ok))], plot_data$Threshold[max(which(plot_data$frac_ok))])
 	
-	plot_data$Colour = c("darkgrey", "black")[cutoff_frac_ok + 1]
+	plot_data$Colour = c("darkgrey", "black")[plot_data$frac_ok + 1]
+	plot_data$Alpha = c(0.2, 1)[plot_data$frac_ok + 1]
 	
-#	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective, color = Colour)) + 
-	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective)) + 
-		geom_line(alpha = 0.85, size = 0.7)# + 
-		#geom_point()
+	theplot = ggplot(data = plot_data, mapping = aes(x = Threshold, y = Objective, alpha = Alpha)) + 
+		geom_line(size = 0.5) +
+		theme(legend.position = "none")
 
 	if (zapsmall(parameters@minimum_group_fraction) != 0)
 	{
@@ -383,8 +386,8 @@ messinaSurvObjPlot = function(object, i)
 	}
 	else if (objective_type == "coxcoef")
 	{	
-		#y_limit = max(c(objective_min, abs(plot_data$Objective)[cutoff_frac_ok]))
-		y_limit = max(c(objective_min, abs(plot_data$Objective[plot_data$Threshold >= threshold - margin & plot_data$Threshold <= threshold + margin])))
+		y_limit = max(objective_min, abs(plot_data$Objective[plot_data$in_acceptance_region]))
+		if (is.na(y_limit))	y_limit = objective_min
 		theplot = theplot + 
 			coord_cartesian(ylim = c(-y_limit, y_limit)*1.3) + 
 			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
