@@ -230,21 +230,21 @@ messinaSurvObjectiveFunc = function(x, y, func)
 	if (func == "tau")
 	{
 		counts = survival::survConcordance.fit(y, x)
-		agree = counts["concordant"]
-		disagree = counts["discordant"]
+		concordant = counts["concordant"]
+		discordant = counts["discordant"]
 		tied.time = counts["tied.time"]
 		tied.risk = counts["tied.risk"]
 		tied = tied.time + tied.risk
-		tau = (agree+tied/2)/(agree+disagree+tied)
+		tau = (concordant+tied/2)/(concordant+discordant+tied)
 
 		return(tau)
 	}
 	else if (func == "reltau")
 	{
 		counts = survival::survConcordance.fit(y, x)
-		agree = counts["concordant"]
-		disagree = counts["discordant"]
-		reltau = agree/(agree+disagree)
+		concordant = counts["concordant"]
+		discordant = counts["discordant"]
+		reltau = concordant/(concordant+discordant)
 
 		return(reltau)
 	}
@@ -261,26 +261,37 @@ messinaSurvObjectiveFunc = function(x, y, func)
 		# return(fit$coefficients[[2]])
 
 		# Very risky: Uses internal undocumented C code
+		# n <- length(x)
+		# time = y[,1]
+		# status = y[,2]
+		# sorted <- order(time)
+		# newstrat <- as.integer(rep(0, n))
+		# offset <- rep(0, n)
+		# weights <- rep(1, n)
+		# stime <- as.double(time[sorted])
+		# sstat <- as.integer(status[sorted])
+		# sx <- as.double(x[sorted])
+		# control = coxph.control()
+		# method = "efron"
+		# maxiter <- control$iter.max
+		# init <- 0
+		# storage.mode(weights) <- storage.mode(init) <- "double"
+		# library.dynam("survival", "survival", .Library)
+		# return(.Call("Ccoxfit6", as.integer(maxiter), stime, sstat, 
+		# 	sx, as.double(offset[sorted]), weights, newstrat, 
+		# 	as.integer(method == "efron"), as.double(control$eps), 
+		# 	as.double(control$toler.chol), as.vector(init), as.integer(1), PACKAGE = "survival")$coef)
+
+		# Use Messina-specific Cox fit implementation
 		n <- length(x)
 		time = y[,1]
 		status = y[,2]
 		sorted <- order(time)
-		newstrat <- as.integer(rep(0, n))
-		offset <- rep(0, n)
-		weights <- rep(1, n)
 		stime <- as.double(time[sorted])
 		sstat <- as.integer(status[sorted])
-		sx <- as.double(x[sorted])
-		control = coxph.control()
-		method = "efron"
-		maxiter <- control$iter.max
-		init <- 0
-		storage.mode(weights) <- storage.mode(init) <- "double"
-		library.dynam("survival", "survival", .Library)
-		return(.Call("Ccoxfit6", as.integer(maxiter), stime, sstat, 
-			sx, as.double(offset[sorted]), weights, newstrat, 
-			as.integer(method == "efron"), as.double(control$eps), 
-			as.double(control$toler.chol), as.vector(init), as.integer(1), PACKAGE = "survival")$coef)
+		sx <- as.logical(x[sorted])
+		result = messinaSurvCoxph(sx, stime, sstat, 1e-6, 20)
+		return(ifelse(result$converged == 0, result$beta, NA))
 	}
 	else
 	{
