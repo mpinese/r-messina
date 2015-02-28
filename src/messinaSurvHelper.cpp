@@ -82,6 +82,51 @@ List messinaSurvCoxph(LogicalVector& cls, NumericVector& times, LogicalVector& e
 }
 
 
+/*	Fast implementation of a Log-rank test.  Arguments:
+	cls			LogicalVector	Class membership vector, true/false for each sample.
+	times		NumericVector	Observation time vector.
+	events		LogicalVector	Event indicator vector (true = event, false = censored).
+
+	times should be sorted in increasing order.
+
+	Returns the test statistic, as a double.
+*/
+// [[Rcpp::export]]
+double messinaSurvLRT(LogicalVector& cls, NumericVector& times, LogicalVector& events)
+{
+	unsigned long n1, n, i, o1, o, j, k;
+	double diff_sum, var_sum, e1, var;
+
+	n = cls.size();
+
+	n1 = 0;
+	for (i = 0; i < n; i++)
+		n1 += cls[i] == false;
+
+	diff_sum = 0;
+	var_sum = 0;
+	for (i = 0; i < n; )
+	{
+		for (j = i + 1; j < n && times[j] == times[i]; j++);
+
+		o = j - i;
+		o1 = 0;
+		for (k = i; k < j; k++)
+			o1 += cls[k] == false;
+
+		e1 = double(o) / double(n) * n1;
+		var = e1 * (1 - double(n1) / double(n))*(double(n) - double(o)) / (double(n) - 1);
+
+		diff_sum += double(o1) - e1;
+		var_sum += var;
+
+		i = j;
+	}
+
+	return diff_sum / sqrt(var_sum);
+}
+
+
 int coxphOptimizer(LogicalVector& cls, NumericVector& times, LogicalVector& events, double& beta, double tol, unsigned long maxiter, double sor_factor)
 {
 	double deriv_at_beta, deriv2_at_beta, deriv_frac;
