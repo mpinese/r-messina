@@ -5,7 +5,7 @@ messinaC <- function(x, cls, n_boot, n_train, minsens, minspec, progress, silent
     .Call('messina_messinaC', PACKAGE = 'messina', x, cls, n_boot, n_train, minsens, minspec, progress, silent)
 }
 
-messinaSurvCoxph <- function(cls, times, events, tol, maxiter) {
-    .Call('messina_messinaSurvCoxph', PACKAGE = 'messina', cls, times, events, tol, maxiter)
+messinaSurvLRT <- function(cls, times, events) {
+    .Call('messina_messinaSurvLRT', PACKAGE = 'messina', cls, times, events)
 }
 
