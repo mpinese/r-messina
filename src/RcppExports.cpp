@@ -27,9 +27,9 @@ BEGIN_RCPP
     return __sexp_result;
 END_RCPP
 }
-// messinaSurvCoxph
-List messinaSurvCoxph(LogicalVector& cls, NumericVector& times, LogicalVector& events, double tol, unsigned long maxiter);
-RcppExport SEXP messina_messinaSurvCoxph(SEXP clsSEXP, SEXP timesSEXP, SEXP eventsSEXP, SEXP tolSEXP, SEXP maxiterSEXP) {
+// messinaSurvLRT
+double messinaSurvLRT(LogicalVector& cls, NumericVector& times, LogicalVector& events);
+RcppExport SEXP messina_messinaSurvLRT(SEXP clsSEXP, SEXP timesSEXP, SEXP eventsSEXP) {
 BEGIN_RCPP
     SEXP __sexp_result;
     {
@@ -37,9 +37,7 @@ BEGIN_RCPP
         Rcpp::traits::input_parameter< LogicalVector& >::type cls(clsSEXP );
         Rcpp::traits::input_parameter< NumericVector& >::type times(timesSEXP );
         Rcpp::traits::input_parameter< LogicalVector& >::type events(eventsSEXP );
-        Rcpp::traits::input_parameter< double >::type tol(tolSEXP );
-        Rcpp::traits::input_parameter< unsigned long >::type maxiter(maxiterSEXP );
-        List __result = messinaSurvCoxph(cls, times, events, tol, maxiter);
+        double __result = messinaSurvLRT(cls, times, events);
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);
