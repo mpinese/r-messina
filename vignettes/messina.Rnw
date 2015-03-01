@@ -266,14 +266,17 @@ in this dataset -- this very small number was chosen only to ensure that the vig
 executed quickly.  In practice, many thousands of genes may be assayed, and multiprocessing
 will be absolutely necessary.
 <<surv-fit>>=
-fit.surv = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE, silent = TRUE)
+fit.surv.tau = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE, silent = TRUE)
+fit.surv.coxcoef = messinaSurv(kirc.exprs, kirc.surv, obj_func = "coxcoef", obj_min = 1, parallel = FALSE, silent = TRUE)
 
-fit.surv
+fit.surv.tau
+fit.surv.coxcoef
 @
 
 Plotting the fit.surv object produces a plot of the best feature found.
 <<surv-plot>>=
-plot(fit.surv, bootstrap_type = "ci")
+plot(fit.surv.tau, bootstrap_type = "ci")
+plot(fit.surv.coxcoef, bootstrap_type = "ci")
 @
 
 
