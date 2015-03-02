@@ -108,7 +108,11 @@ setClassUnion("MessinaY", c("Surv", "vector"))
 #'   Mean TPR, Mean FPR, Mean TNR, Mean FNR, Variance of TPR, Variance
 #'   of FPR, Variance of TNR, Variance of FNR, Mean sensitivity, Mean
 #'   specificity.  For a messinaSurv fit, this contains a single column,
-#'   of the mean objective value for that row's feature.
+#'   of the median objective metric value for that row's feature.  The
+#'   interpretation of this metric depends on the messinaSurv objective
+#'   function used; it is generally the test statistic used for thresholding
+#'   by that function, but in the case of user-specified objective functions,
+#'   could be any value summarising the performance of a threshold classifier.
 #' @slot fits An object of class MessinaFits, containing details of the
 #'   fits for each feature.
 #'

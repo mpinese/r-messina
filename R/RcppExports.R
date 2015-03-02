@@ -9,3 +9,7 @@ messinaSurvLRT <- function(cls, times, events) {
     .Call('messina_messinaSurvLRT', PACKAGE = 'messina', cls, times, events)
 }
 
+messinaSurvConcordance <- function(cls, times, events) {
+    .Call('messina_messinaSurvConcordance', PACKAGE = 'messina', cls, times, events)
+}
+

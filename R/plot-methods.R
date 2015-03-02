@@ -304,7 +304,12 @@ messinaSurvPlot = function(object, indices = c(1), sort_features = TRUE, bootstr
 		threshold = fit_summary$threshold[i]
 		margin = fit_summary$margin[i]
 
-		obj_plot = messinaSurvObjPlot(object, i) + ggtitle(sprintf("Objective Function: %s", object@parameters@perf_requirement$objective_type))
+		obj_plot = messinaSurvObjPlot(object, i)
+
+		if (is.null(attr(object@parameters@perf_requirement$objective, "ObjCall", exact = TRUE)))
+			obj_plot = obj_plot + ggtitle(sprintf("Objective Function: Unknown"))
+		else
+			obj_plot = obj_plot + ggtitle(sprintf("Objective Function: \n%s", attr(object@parameters@perf_requirement$objective, "ObjCall", exact = TRUE)))
 		
 		if (bootstrap_type == "ci")			{ bootstrap_string = sprintf("Shaded area: %.0f%% CI", bootstrap_ci*100) }
 		else if (bootstrap_type == "stdev")	{ bootstrap_string = "Shaded area: +/- 1 SD" }
@@ -349,8 +354,7 @@ messinaSurvObjPlot = function(object, i)
 	Threshold = Objective = NULL		# To shut up an R CMD check note for the later use of these in ggplot
 
 	parameters = object@parameters
-	objective_type = parameters@perf_requirement$objective_type
-	objective_min = parameters@perf_requirement$min_objective
+	objective = parameters@perf_requirement$objective
 
 	threshold = object@fits@summary$threshold[i]
 	margin = object@fits@summary$margin[i]
@@ -377,21 +381,20 @@ messinaSurvObjPlot = function(object, i)
 			geom_vline(xintercept = cutoff_frac_points, lty = "dotted", alpha = 0.5)
 	}
 
-	if (objective_type %in% c("tau", "reltau"))
+	if (!is.null(attr(objective, "PlotThresh", exact = TRUE)))
+		theplot = theplot + geom_hline(yintercept = attr(objective, "PlotThresh", exact = TRUE), lty = c("dotted", "solid", "dotted"), alpha = 0.5)
+
+	if (!is.null(attr(objective, "PlotLimits", exact = TRUE)))
+		theplot = theplot + coord_cartesian(ylim = attr(objective, "PlotLimits", exact = TRUE))
+	else
 	{
-		theplot = theplot + 
-			coord_cartesian(ylim = c(0, 1)) + 
-			geom_hline(yintercept = c(objective_min, 1-objective_min), lty = "dotted") +
-			geom_hline(yintercept = 0.5, lty = "solid", alpha = 0.5)
-	}
-	else if (objective_type == "coxcoef")
-	{	
-		y_limit = max(objective_min, abs(plot_data$Objective[plot_data$in_acceptance_region]))
-		if (is.na(y_limit))	y_limit = objective_min
-		theplot = theplot + 
-			coord_cartesian(ylim = c(-y_limit, y_limit)*1.3) + 
-			geom_hline(yintercept = c(objective_min, -objective_min), lty = "dotted") + 
-			geom_hline(yintercept = 0, lty = "solid", alpha = 0.5)
+		if (!is.null(attr(objective, "PlotLimits", exact = TRUE)))
+			y_limit = max(max(attr(objective, "PlotLimits", exact = TRUE)), abs(plot_data$Objective[plot_data$in_acceptance_region]))
+		else
+			y_limit = max(abs(plot_data$Objective[plot_data$in_acceptance_region]))
+
+		if (!is.na(y_limit))
+			theplot = theplot + coord_cartesian(ylim = c(-y_limit, y_limit)*1.3)
 	}
 
 	if (!is.na(threshold))
