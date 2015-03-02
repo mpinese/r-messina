@@ -88,8 +88,8 @@ class Classifier
 	void setupFullTrainCache(bool sorted);
 	void setupTrainCache(const int32_t *samples, int32_t n_samples, bool sorted);
 	void sortTrainCache(int32_t n_samples);
-	bool doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos) const;
-	bool doesPerfPass(float tp, float fp, float tn, float fn, bool k_is_pos) const;
+	bool doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn) const;
+	bool doesPerfPass(float tp, float fp, float tn, float fn) const;
 	void findFeasibleRegion(int32_t n_samples, bool k_is_pos, int32_t& f0, int32_t& f1);
 	bool makeUnboundedClassifierFromFR(int32_t n_samples, bool k_is_pos, int32_t f0, int32_t f1);
 	STATUS trainOnCache(int32_t n_samples);

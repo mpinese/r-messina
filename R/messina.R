@@ -193,7 +193,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	# Result is a list:
 	#	Item		Dimensions		Data type	Description
 	#   result$d1	Mx3 matrix		Integer		Columns are class_type, class_threshold, class_margin
-	#	result$d2	Mx10 matrix		Numeric		Columns are class_ptrue, p_successful, mean tpr, mean fpr, mean tnr, mean fnr, var tpr, var fpr, var tnr, var fnr
+	#	result$d2	Mx10 matrix		Numeric		Columns are class_ptrue, p_successful, mean tpr, mean fpr, mean tnr, mean fnr, var tpr, var fpr, var tnr, var fnr, p_valpass
 	#	result$d3	M-vector		Logical		class_posk
 	# M is the number of rows of x (genes / probes / whatever)
 	# class_type takes the following values:
@@ -218,14 +218,14 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	classifier_perf_var = result$d2[,7:10]
 	classifier_posk = result$d3
 	classifier_posk[classifier_type == "Random"] = NA
-	classifier_ppass = result$d2[,11]
+	classifier_pvalpass = result$d2[,11]
 	
 	colnames(classifier_perf_mean) = c("TPR", "FPR", "TNR", "FNR")
 	colnames(classifier_perf_var) = c("TPR", "FPR", "TNR", "FNR")
 	
 	classifier_sens_mean = classifier_perf_mean[,"TPR"] / (classifier_perf_mean[,"TPR"] + classifier_perf_mean[,"FNR"])
 	classifier_spec_mean = classifier_perf_mean[,"TNR"] / (classifier_perf_mean[,"TNR"] + classifier_perf_mean[,"FPR"])
-	specifications_passed = classifier_ppass >= 0.5 & classifier_type == "Threshold"
+	specifications_passed = classifier_pvalpass >= 0.5 & classifier_type == "Threshold"
 	classifier_perf_mean = cbind(classifier_perf_mean, Sensitivity = classifier_sens_mean, Specificity = classifier_spec_mean)
 	
 	params = .MessinaParameters(	x = x,
@@ -256,7 +256,8 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 								posk = classifier_posk,
 								margin = classifier_margin,
 								ptrue = classifier_ptrue,
-								psuccessful = classifier_psuccessful)
+								psuccessful = classifier_psuccessful,
+								pvalpass = classifier_pvalpass)
 	
 	fits = .MessinaFits(summary = fit_summary, objective_surfaces = list())
 	

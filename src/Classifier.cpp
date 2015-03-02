@@ -144,28 +144,17 @@ void Classifier::sortTrainCache(int32_t n_samples)
 }
 
 
-inline bool Classifier::doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos) const
+inline bool Classifier::doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn) const
 {
-	return doesPerfPass(float(tp), float(fp), float(tn), float(fn), k_is_pos);
+	return doesPerfPass(float(tp), float(fp), float(tn), float(fn));
 }
 
 
-inline bool Classifier::doesPerfPass(float tp, float fp, float tn, float fn, bool k_is_pos) const
+inline bool Classifier::doesPerfPass(float tp, float fp, float tn, float fn) const
 {
 	float sens, spec;
-	float k_tp, k_tn;
-	if (k_is_pos)
-	{
-		k_tp = tp;
-		k_tn = tn;
-	}
-	else
-	{
-		k_tp = fn;
-		k_tn = fp;
-	}
-	sens = k_tp / (tp + fn);
-	spec = k_tn / (tn + fp);
+	sens = tp / (tp + fn);
+	spec = tn / (tn + fp);
 	return (sens >= m_targ_sens && spec >= m_targ_spec);
 }
 
@@ -210,15 +199,7 @@ void Classifier::findFeasibleRegion(int32_t n_samples, bool k_is_pos, int32_t& f
 	for (i = 0; i <= n_samples; i++)
 	{
 		// Check performance for the current cutoff.
-		// NB: Note that the k_is_pos argument to doesPerfPass has been
-		// overridden.  This is as this function keeps a correct tally
-		// of tp and fp, whereas train (for which doesPerfPass was
-		// originally written) keeps a tally assuming k = 1.  Therefore,
-		// when evaluating performance, train requires a correction for
-		// the k = -1 case.  No such correction is needed here, and so
-		// we always set k_is_pos to true, which prevents doesPerfPass
-		// from performing any corrections.
-		perf_passes = doesPerfPass(tp, fp, tn, fn, true); 
+		perf_passes = doesPerfPass(tp, fp, tn, fn); 
 		if (perf_passes && !ifr)
 		{
 			// We've just entered the feasible region.  If i = 0, then
@@ -550,7 +531,7 @@ void Classifier::updatePerformance(Perf& sum, Perf& sum_sq, uint16_t& passed_cou
 	sum_sq.fpr += m_perf.fpr * m_perf.fpr;
 	sum_sq.tnr += m_perf.tnr * m_perf.tnr;
 
-	if (doesPerfPass(m_perf.tpr, m_perf.fpr, m_perf.tnr, m_perf.fnr, m_posk))
+	if (doesPerfPass(m_perf.tpr, m_perf.fpr, m_perf.tnr, m_perf.fnr))
 		passed_count++;
 }
 
