@@ -250,7 +250,6 @@ messinaSurvObj.CoxCoef = function(coxcoef_threshold)
 }
 
 
-#' @importFrom survival survConcordance.fit
 #' @export
 messinaSurvObj.Tau = function(tau_threshold)
 {
@@ -275,7 +274,6 @@ messinaSurvObj.Tau = function(tau_threshold)
 }
 
 
-#' @importFrom survival survConcordance.fit
 #' @export
 messinaSurvObj.RelTau = function(reltau_threshold)
 {
