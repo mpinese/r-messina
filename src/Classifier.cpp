@@ -144,10 +144,16 @@ void Classifier::sortTrainCache(int32_t n_samples)
 }
 
 
-inline bool Classifier::doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos)
+inline bool Classifier::doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos) const
+{
+	return doesPerfPass(float(tp), float(fp), float(tn), float(fn), k_is_pos);
+}
+
+
+inline bool Classifier::doesPerfPass(float tp, float fp, float tn, float fn, bool k_is_pos) const
 {
 	float sens, spec;
-	int32_t k_tp, k_tn;
+	float k_tp, k_tn;
 	if (k_is_pos)
 	{
 		k_tp = tp;
@@ -158,8 +164,8 @@ inline bool Classifier::doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t
 		k_tp = fn;
 		k_tn = fp;
 	}
-	sens = float(k_tp) / (tp + fn);
-	spec = float(k_tn) / (tn + fp);
+	sens = k_tp / (tp + fn);
+	spec = k_tn / (tn + fp);
 	return (sens >= m_targ_sens && spec >= m_targ_spec);
 }
 
@@ -533,7 +539,7 @@ inline bool Classifier::decide(uint16_t expr_level)
 }
 
 
-void Classifier::updatePerformance(Perf& sum, Perf& sum_sq) const
+void Classifier::updatePerformance(Perf& sum, Perf& sum_sq, uint16_t& passed_count) const
 {
 	sum.fnr += m_perf.fnr;
 	sum.tpr += m_perf.tpr;
@@ -543,6 +549,9 @@ void Classifier::updatePerformance(Perf& sum, Perf& sum_sq) const
 	sum_sq.tpr += m_perf.tpr * m_perf.tpr;
 	sum_sq.fpr += m_perf.fpr * m_perf.fpr;
 	sum_sq.tnr += m_perf.tnr * m_perf.tnr;
+
+	if (doesPerfPass(m_perf.tpr, m_perf.fpr, m_perf.tnr, m_perf.fnr, m_posk))
+		passed_count++;
 }
 
 

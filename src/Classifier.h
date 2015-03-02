@@ -59,6 +59,7 @@ struct Result
 	uint16_t class_threshold, class_margin;
 	
 	float p_successful;
+	float p_tests_pass;
 	Perf mean, var;
 };
 
@@ -87,7 +88,8 @@ class Classifier
 	void setupFullTrainCache(bool sorted);
 	void setupTrainCache(const int32_t *samples, int32_t n_samples, bool sorted);
 	void sortTrainCache(int32_t n_samples);
-	bool doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos);
+	bool doesPerfPass(int32_t tp, int32_t fp, int32_t tn, int32_t fn, bool k_is_pos) const;
+	bool doesPerfPass(float tp, float fp, float tn, float fn, bool k_is_pos) const;
 	void findFeasibleRegion(int32_t n_samples, bool k_is_pos, int32_t& f0, int32_t& f1);
 	bool makeUnboundedClassifierFromFR(int32_t n_samples, bool k_is_pos, int32_t f0, int32_t f1);
 	STATUS trainOnCache(int32_t n_samples);
@@ -102,7 +104,7 @@ public:
 	STATUS train(const int32_t *samples, int32_t n_samples, bool sorted);
 	STATUS train(bool sorted);
 	STATUS test(const int32_t *samples, int32_t n_samples);
-	void updatePerformance(Perf& sum, Perf& sum_sq) const;
+	void updatePerformance(Perf& sum, Perf& sum_sq, uint16_t& passed_count) const;
 	
 	const Data *getData() const			{ return m_data; };
 	inline bool isInit() const			{ return m_init; };

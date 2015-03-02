@@ -177,7 +177,7 @@ messinaSurv = function(x, y, objective, min_group_frac = 0.1, f_train = 0.8, n_b
 	boot_objs_passed = laply(boot_objs, function(boot_obj) as.logical(boot_obj["pass_good_positive",]))
 	boot_objs_metrics = laply(boot_objs, function(boot_obj) as.numeric(boot_obj["metric",]))
 
-	median_obj_metric = apply(boot_objs_metrics, 1, median)
+	median_obj_metric = apply(boot_objs_metrics, 1, median, na.rm = TRUE)
 
 	rownames(boot_objs_passed) = rownames(x)
 	colnames(boot_objs_passed) <- NULL

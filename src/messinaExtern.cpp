@@ -144,7 +144,7 @@ STATUS convertRMatrix2Data(NumericMatrix &x, LogicalVector &cls, Data &data)
 List convertResults2R(Result *results, uint32_t n_results)
 {
 	IntegerMatrix d1(n_results, 3);		// class_type, class_threshold, class_margin
-	NumericMatrix d2(n_results, 10);	// class_ptrue, p_successful, perf_mean(tpr,fpr,tnr,fnr), perf_var(tpr,fpr,tnr,fnr)
+	NumericMatrix d2(n_results, 11);	// class_ptrue, p_successful, perf_mean(tpr,fpr,tnr,fnr), perf_var(tpr,fpr,tnr,fnr), p_pass
 	LogicalVector d3(n_results);		// class_posk
 	
 	R_len_t i;
@@ -168,6 +168,7 @@ List convertResults2R(Result *results, uint32_t n_results)
 		d2(i, 7) = this_result->var.fpr;
 		d2(i, 8) = this_result->var.tnr;
 		d2(i, 9) = this_result->var.fnr;
+		d2(i, 10) = this_result->p_tests_pass;
 		
 		d3[i] = this_result->class_posk;
 	}

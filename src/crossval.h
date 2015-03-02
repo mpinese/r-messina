@@ -34,7 +34,7 @@ namespace CrossVal
 
 inline void calcPerformanceStats(const Perf& sum, const Perf& sum_sq, Perf& mean, Perf& var, uint16_t n);
 inline void selectTestSet(bool *in_test, int32_t test_size, int32_t n_samples);
-STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int32_t *train_indices, int32_t *test_indices, bool *in_test_set, Perf& mean, Perf& var, uint16_t& n_successful);
+STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int32_t *train_indices, int32_t *test_indices, bool *in_test_set, Perf& mean, Perf& var, uint16_t& n_successful, uint16_t& n_pass);
 STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *results, bool progress, bool silent);
 
 
