@@ -66,7 +66,7 @@ inline void selectTestSet(bool *in_test, int32_t test_size, int32_t n_samples)
 }
 
 
-STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int32_t *train_indices, int32_t *test_indices, bool *in_test_set, Perf& mean, Perf& var, uint16_t& n_successful)
+STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int32_t *train_indices, int32_t *test_indices, bool *in_test_set, Perf& mean, Perf& var, uint16_t& n_successful, uint16_t& n_pass)
 {
 	uint16_t fold;
 	int32_t sel_index, test_index = 0, train_index = 0, n_samps;
@@ -83,6 +83,7 @@ STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int
 	sum_sq.tnr = 0;
 	sum_sq.fpr = 0;
 	sum_sq.fnr = 0;
+	n_pass = 0;
 
 	n_samps = classifier.getNSamps();
 
@@ -116,8 +117,7 @@ STATUS gene_cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, int
 			return err;
 
 		// Update the performance metrics
-		// TODO: Will this call, which will be in the Classifier class, substantially slow things down?  Remember it's in the innermost CV loop.
-		classifier.updatePerformance(sum, sum_sq);
+		classifier.updatePerformance(sum, sum_sq, n_pass);
 	}
 
 	// Use the performance sums to calculate mean and variance
@@ -166,7 +166,7 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 	int32_t gene, n_genes, n_samps, test_size;
 	STATUS err;
 	Perf mean, var;
-	uint16_t n_successful;
+	uint16_t n_successful, n_pass;
 	const uint16_t progress_bar_width = 60;
 	float progress_bar_frac_done;
 	uint16_t progress_bar_n_done, progress_bar_i;
@@ -241,7 +241,7 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 			return err;
 		}
 		
-		if ((err = gene_cv(train_size, n_iters, classifier, train_indices, test_indices, in_test_set, mean, var, n_successful)) != OK)
+		if ((err = gene_cv(train_size, n_iters, classifier, train_indices, test_indices, in_test_set, mean, var, n_successful, n_pass)) != OK)
 		{
 			delete train_indices;
 			delete test_indices;
@@ -260,6 +260,7 @@ STATUS cv(int32_t train_size, uint16_t n_iters, Classifier& classifier, Result *
 		results[gene].mean = mean;
 		results[gene].var = var;
 		results[gene].p_successful = float(n_successful) / n_iters;
+		results[gene].p_tests_pass = float(n_pass) / n_iters;
 	}
 
 	if (!silent)

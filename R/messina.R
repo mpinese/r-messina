@@ -218,13 +218,14 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	classifier_perf_var = result$d2[,7:10]
 	classifier_posk = result$d3
 	classifier_posk[classifier_type == "Random"] = NA
+	classifier_ppass = result$d2[,11]
 	
 	colnames(classifier_perf_mean) = c("TPR", "FPR", "TNR", "FNR")
 	colnames(classifier_perf_var) = c("TPR", "FPR", "TNR", "FNR")
 	
 	classifier_sens_mean = classifier_perf_mean[,"TPR"] / (classifier_perf_mean[,"TPR"] + classifier_perf_mean[,"FNR"])
 	classifier_spec_mean = classifier_perf_mean[,"TNR"] / (classifier_perf_mean[,"TNR"] + classifier_perf_mean[,"FPR"])
-	specifications_passed = classifier_sens_mean >= min_sens & classifier_spec_mean >= min_spec & classifier_type == "Threshold"
+	specifications_passed = classifier_ppass >= 0.5 & classifier_type == "Threshold"
 	classifier_perf_mean = cbind(classifier_perf_mean, Sensitivity = classifier_sens_mean, Specificity = classifier_spec_mean)
 	
 	params = .MessinaParameters(	x = x,
