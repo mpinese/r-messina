@@ -85,3 +85,49 @@ double messinaSurvLRT(LogicalVector& cls, NumericVector& times, LogicalVector& e
 
 	return diff_sum / sqrt(variance_sum);
 }
+
+
+/*	Fast concordance calculation.  Arguments:
+	cls			LogicalVector	Class membership vector, true/false for each sample.
+	times		NumericVector	Observation time vector.
+	events		LogicalVector	Event indicator vector (true = event, false = censored).
+
+	times should be sorted in increasing order.
+
+	Returns the a list, with members:
+	"ties": count of comparisons with either tied times or class
+	"concordant": count of concordant comparisons
+	"discordant": count of discordant comparisons
+*/
+// [[Rcpp::export]]
+List messinaSurvConcordance(LogicalVector& cls, NumericVector& times, LogicalVector& events)
+{
+	unsigned long ties = 0, concordant = 0, discordant = 0;
+	unsigned long n, i, j;
+	List ret;
+
+	n = cls.size();
+
+	for (i = 0; i < n; i++)
+	{
+		for (j = i + 1; j < n; j++)
+		{
+			// Check for incomparability; skip if so.
+			if ((times[i] < times[j] && events[i] == false) || (events[i] == false && events[j] == false))
+				continue;
+
+			if (cls[i] == cls[j] || times[i] == times[j])
+				ties++;
+			else if (cls[i] == true)
+				concordant++;
+			else
+				discordant++;
+		}
+	}
+
+	ret["ties"] = ties;
+	ret["concordant"] = concordant;
+	ret["discordant"] = discordant;
+
+	return ret;
+}
