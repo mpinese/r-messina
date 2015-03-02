@@ -52,7 +52,15 @@ setMethod("show", signature = "MessinaParameters", definition = function(object)
 	}
 	else
 	{
-		cat("  Objective type: survival (", object@perf_requirement$objective_type, ").  Minimum objective value: ", object@perf_requirement$min_objective, "\n", sep = "")
+		cat("  Objective type: survival [")
+		if (is.null(attr(object@perf_requirement$objective, "ObjCall", exact = TRUE)))
+		{
+			cat("no other information available -- custom objective function without ObjCall attribute set?].\n")
+		}
+		else
+		{
+			cat(attr(object@perf_requirement$objective, "ObjCall", exact = TRUE), "].\n", sep = "")
+		}
 	}
 	cat("  Minimum group fraction: ", object@minimum_group_fraction, "\n", sep = "")
 	cat("  Training fraction: ", object@training_fraction, "\n", sep = "")
