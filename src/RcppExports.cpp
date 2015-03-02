@@ -45,7 +45,7 @@ BEGIN_RCPP
 END_RCPP
 }
 // messinaSurvConcordance
-Rcpp::List messinaSurvConcordance(LogicalVector& cls, NumericVector& times, LogicalVector& events);
+List messinaSurvConcordance(LogicalVector& cls, NumericVector& times, LogicalVector& events);
 RcppExport SEXP messina_messinaSurvConcordance(SEXP clsSEXP, SEXP timesSEXP, SEXP eventsSEXP) {
 BEGIN_RCPP
     SEXP __sexp_result;
@@ -54,7 +54,7 @@ BEGIN_RCPP
         Rcpp::traits::input_parameter< LogicalVector& >::type cls(clsSEXP );
         Rcpp::traits::input_parameter< NumericVector& >::type times(timesSEXP );
         Rcpp::traits::input_parameter< LogicalVector& >::type events(eventsSEXP );
-        Rcpp::List __result = messinaSurvConcordance(cls, times, events);
+        List __result = messinaSurvConcordance(cls, times, events);
         PROTECT(__sexp_result = Rcpp::wrap(__result));
     }
     UNPROTECT(1);

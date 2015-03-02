@@ -266,8 +266,8 @@ in this dataset -- this very small number was chosen only to ensure that the vig
 executed quickly.  In practice, many thousands of genes may be assayed, and multiprocessing
 will be absolutely necessary.
 <<surv-fit>>=
-fit.surv.tau = messinaSurv(kirc.exprs, kirc.surv, obj_func = "tau", obj_min = 0.6, parallel = FALSE, silent = TRUE)
-fit.surv.coxcoef = messinaSurv(kirc.exprs, kirc.surv, obj_func = "coxcoef", obj_min = 1, parallel = FALSE, silent = TRUE)
+fit.surv.tau = messinaSurv(kirc.exprs, kirc.surv, objective = messinaSurvObj.Tau(0.6), parallel = FALSE, silent = TRUE)
+fit.surv.coxcoef = messinaSurv(kirc.exprs, kirc.surv, objective = messinaSurvObj.CoxCoef(log(2)), parallel = FALSE, silent = TRUE)
 
 fit.surv.tau
 fit.surv.coxcoef

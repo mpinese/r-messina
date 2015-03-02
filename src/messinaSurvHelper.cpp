@@ -15,6 +15,8 @@
  *			were too slow, and occasionally unstable.  Replaced with
  *			messinaSurvLRT, which gives almost identical estimates, but
  *			is both much faster, and stable.
+ * 20150302	Added messinaSurvConcordance, for fast calculation of 
+ * 			concordance measures.
  */
 
 #include <Rcpp.h>
