@@ -203,7 +203,7 @@ messina = function(x, y, min_sens, min_spec, f_train = 0.9, n_boot = 50,
 	#	3	ONE_CLASS	A deterministic single-class classifier that returns class posk.
 	stopifnot(all(result$d1[,1] != 0))
 
-	classifier_type = as.factor(c("Threshold", "Random", "OneClass")[result$d1[,1]])
+	classifier_type = factor(c("Threshold", "Random", "OneClass")[result$d1[,1]], levels = c("Threshold", "Random", "OneClass"))
 	classifier_type[xdelta2 == 0] = "Random"
 	classifier_threshold = result$d1[,2] * xdelta / 65535 + xmin
 	classifier_margin = result$d1[,3] * xdelta / 65535
