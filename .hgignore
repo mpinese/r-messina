@@ -1,7 +1,5 @@
 syntax:glob
 *.o
 *.so
-*.Rd
 *.log
 *.tex
-
